@@ -66,11 +66,11 @@ func (u *UsageTracker) getTrackingEntry(ctx context.Context, project string, wor
 
 	u.lock.RLock()
 	var trackingEntry TrackingMCPEntry
-	query := "SELECT project, workspace, mcp, billing_cycle_start, deleted_at FROM mcp WHERE project = ? AND workspace = ? AND mcp = ?"
+	query := "SELECT project, workspace, mcp, last_usage_capture, deleted_at FROM mcp WHERE project = ? AND workspace = ? AND mcp = ?"
 	row := u.db.QueryRowContext(ctx, query, project, workspace, mcp_name)
 	u.lock.RUnlock()
 
-	err := row.Scan(&trackingEntry.Project, &trackingEntry.Workspace, &trackingEntry.Name, &trackingEntry.BillingCycleStart, &trackingEntry.DeletedAt)
+	err := row.Scan(&trackingEntry.Project, &trackingEntry.Workspace, &trackingEntry.Name, &trackingEntry.LastUsageCapture, &trackingEntry.DeletedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -87,7 +87,7 @@ func (u *UsageTracker) CreationEvent(ctx context.Context, project string, worksp
 	u.lock.Lock()
 
 	creation_timestamp := time.Now().UTC()
-	sql := "INSERT INTO mcp (project, workspace, mcp, billing_cycle_start) VALUES (?, ?, ?, ?)"
+	sql := "INSERT INTO mcp (project, workspace, mcp, last_usage_capture) VALUES (?, ?, ?, ?)"
 	_, err := u.db.ExecContext(ctx, sql, project, workspace, mcp_name, creation_timestamp)
 	u.lock.Unlock()
 	if err != nil {
@@ -104,13 +104,13 @@ func (u *UsageTracker) DeletionEvent(ctx context.Context, project string, worksp
 
 	deletion_timestamp := time.Now().UTC()
 
-	var billing_cycle_start time.Time
-	query := "SELECT billing_cycle_start FROM mcp WHERE project = ? AND workspace = ? AND mcp = ?"
+	var last_usage_capture time.Time
+	query := "SELECT last_usage_capture FROM mcp WHERE project = ? AND workspace = ? AND mcp = ?"
 	row := u.db.QueryRowContext(ctx, query, project, workspace, mcp_name)
 
 	u.lock.RUnlock()
 
-	err := row.Scan(&billing_cycle_start)
+	err := row.Scan(&last_usage_capture)
 	if err == sql.ErrNoRows {
 		return nil
 	}
@@ -128,7 +128,7 @@ func (u *UsageTracker) DeletionEvent(ctx context.Context, project string, worksp
 	}
 
 	// Calculate usage until deletion
-	usage := deletion_timestamp.Sub(billing_cycle_start)
+	usage := deletion_timestamp.Sub(last_usage_capture)
 
 	minutes := int(math.Ceil(usage.Abs().Minutes()))
 
@@ -141,10 +141,58 @@ func (u *UsageTracker) DeletionEvent(ctx context.Context, project string, worksp
 }
 
 func (u *UsageTracker) ScheduledEvent(ctx context.Context) error {
-	_ = log.FromContext(ctx)
+	logf := log.FromContext(ctx)
+
+	hourStart := time.Now().UTC().Truncate(time.Hour)
+
+	logf.Info("tracking hourly usage for mcps " + hourStart.Format(time.DateTime))
+
+	u.lock.RLock()
+	query := "SELECT project, workspace, mcp, last_usage_capture, deleted_at FROM mcp"
+	rows, err := u.db.QueryContext(ctx, query)
+	if err != nil {
+		return err
+	}
+	u.lock.RUnlock()
 
 	u.lock.Lock()
 	defer u.lock.Unlock()
+	for rows.Next() {
+		var trackingEntry TrackingMCPEntry
+		err = rows.Scan(
+			&trackingEntry.Project,
+			&trackingEntry.Workspace,
+			&trackingEntry.Name,
+			&trackingEntry.LastUsageCapture,
+			&trackingEntry.DeletedAt,
+		)
+		if err != nil {
+			return err
+		}
+
+		if trackingEntry.DeletedAt.Valid {
+			continue
+		}
+
+		consumedDuration := hourStart.Sub(trackingEntry.LastUsageCapture)
+		if consumedDuration < 0 {
+			// BillingCycleStart is in future, so no need for calculating it.
+			continue
+		}
+		consumedMinutes := int(math.Ceil(consumedDuration.Minutes()))
+
+		query := "UPDATE mcp SET last_usage_capture = ? WHERE project = ? AND workspace = ? AND mcp = ?"
+		_, err := u.db.ExecContext(ctx, query, hourStart, trackingEntry.Project, trackingEntry.Workspace, trackingEntry.Name)
+		if err != nil {
+			return err
+		}
+
+		query = "INSERT INTO hourly_usage (project, workspace, mcp, timestamp, minutes) VALUES (?, ?, ?, ?, ?)"
+		_, err = u.db.ExecContext(ctx, query, trackingEntry.Project, trackingEntry.Workspace, trackingEntry.Name, hourStart, consumedMinutes)
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }

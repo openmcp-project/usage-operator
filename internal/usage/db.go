@@ -34,7 +34,7 @@ func InitDB(ctx context.Context) error {
 			project VARCHAR NOT NULL,
 			workspace VARCHAR NOT NULL,
 			mcp VARCHAR NOT NULL,
-			billing_cycle_start TIMESTAMPTZ NOT NULL,
+			last_usage_capture TIMESTAMPTZ NOT NULL,
 			deleted_at TIMESTAMPTZ,
 			PRIMARY KEY (project, workspace, mcp)
 		);`
@@ -64,9 +64,17 @@ func InitDB(ctx context.Context) error {
 }
 
 type TrackingMCPEntry struct {
-	Project           string
-	Workspace         string
-	Name              string
-	BillingCycleStart time.Time
-	DeletedAt         sql.NullTime
+	Project          string
+	Workspace        string
+	Name             string
+	LastUsageCapture time.Time
+	DeletedAt        sql.NullTime
+}
+
+type HourlyUsageEntry struct {
+	Project   string
+	Workspace string
+	Name      string
+	Timestamp time.Time
+	Minutes   int
 }

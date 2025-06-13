@@ -224,6 +224,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	err = usageTracker.ScheduledEvent(context.Background())
+	if err != nil {
+		setupLog.Error(err, "unable to run scheduledEvent on start")
+		os.Exit(1)
+	}
+
 	if err := (&controller.ManagedControlPlaneReconciler{
 		Client:       mgr.GetClient(),
 		Scheme:       mgr.GetScheme(),
