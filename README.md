@@ -6,6 +6,9 @@
 
 The usage operator is used to capture usage of your customers using the MCP platform. It can be used in conjunction with a custom metering operator dedicated for your use case.
 
+This operator can be used in conjunction with a metering-operator to charge your customers using your openMCP platform.
+The operator exposes a Usage Resource which has aggregated usage stats about every MCP.
+
 ## Requirements and Setup
 
 ### Prerequisites
@@ -15,9 +18,8 @@ The usage operator is used to capture usage of your customers using the MCP plat
 - kubectl version v1.11.3+.
 - Access to a Kubernetes v1.11.3+ cluster.
 
-
-
 ### To Deploy on the cluster
+
 **Build and push your image to the location specified by `IMG`:**
 
 ```sh
