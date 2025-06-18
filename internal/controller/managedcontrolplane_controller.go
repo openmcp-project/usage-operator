@@ -21,12 +21,13 @@ import (
 	"errors"
 	"regexp"
 
+	"github.com/openmcp-project/controller-utils/pkg/logging"
 	corev1alpha1 "github.com/openmcp-project/mcp-operator/api/core/v1alpha1"
-	"github.com/openmcp-project/usage-operator/internal/usage"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
+
+	"github.com/openmcp-project/usage-operator/internal/usage"
 )
 
 // ManagedControlPlaneReconciler reconciles a ManagedControlPlane object
@@ -51,7 +52,10 @@ type ManagedControlPlaneReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.21.0/pkg/reconcile
 func (r *ManagedControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := logf.FromContext(ctx)
+	log, err := logging.FromContext(ctx)
+	if err != nil {
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
 
 	var mcp corev1alpha1.ManagedControlPlane
 	if err := r.Get(ctx, req.NamespacedName, &mcp); err != nil {
@@ -83,7 +87,7 @@ func (r *ManagedControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.
 		return ctrl.Result{}, nil
 	}
 
-	err := r.UsageTracker.CreateOrIgnoreEvent(ctx, project, workspace, mcp.Name)
+	err = r.UsageTracker.CreateOrIgnoreEvent(ctx, project, workspace, mcp.Name)
 	if err != nil {
 		log.Error(err, "error when tracking create or ignore of mcp")
 		return ctrl.Result{}, client.IgnoreNotFound(err)

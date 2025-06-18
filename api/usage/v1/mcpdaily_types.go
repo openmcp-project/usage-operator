@@ -17,6 +17,9 @@ limitations under the License.
 package v1
 
 import (
+	"fmt"
+	"time"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -38,13 +41,28 @@ type MCPDailyStatus struct {
 }
 
 type DailyUsage struct {
-	Timestamp metav1.Time `json:"timestamp"`
-	Hours     int         `json:"hours"`
+	Date  metav1.Time     `json:"date"`
+	Usage metav1.Duration `json:"hours"`
+}
+
+func NewDailyUsage(date time.Time, hours int) (DailyUsage, error) {
+	duration, err := time.ParseDuration(fmt.Sprintf("%vh", hours))
+	if err != nil {
+		return DailyUsage{}, err
+	}
+
+	return DailyUsage{
+		Date: metav1.NewTime(date),
+		Usage: metav1.Duration{
+			Duration: duration,
+		},
+	}, nil
 }
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster
+// +kubebuilder:metadata:labels="openmcp.cloud/cluster=onboarding"
 
 // MCPDaily is the Schema for the mcpdailies API.
 type MCPDaily struct {

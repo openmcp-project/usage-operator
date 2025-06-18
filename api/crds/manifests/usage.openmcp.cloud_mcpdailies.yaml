@@ -4,6 +4,8 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.18.0
+  labels:
+    openmcp.cloud/cluster: onboarding
   name: mcpdailies.usage.openmcp.cloud
 spec:
   group: usage.openmcp.cloud
@@ -50,14 +52,14 @@ spec:
               daily_usage:
                 items:
                   properties:
-                    hours:
-                      type: integer
-                    timestamp:
+                    date:
                       format: date-time
                       type: string
+                    hours:
+                      type: string
                   required:
+                  - date
                   - hours
-                  - timestamp
                   type: object
                 type: array
               mcp:
