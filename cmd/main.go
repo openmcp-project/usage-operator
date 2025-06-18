@@ -39,6 +39,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
+	usagev1 "github.com/openmcp-project/usage-operator/api/usage/v1"
 	"github.com/openmcp-project/usage-operator/internal/controller"
 	"github.com/openmcp-project/usage-operator/internal/runnable"
 	"github.com/openmcp-project/usage-operator/internal/usage"
@@ -54,6 +55,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(corev1alpha1.AddToScheme(scheme))
+	utilruntime.Must(usagev1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	_ "github.com/marcboeker/go-duckdb"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func GetDB() (*sql.DB, error) {
@@ -77,4 +78,14 @@ type HourlyUsageEntry struct {
 	Name      string
 	Timestamp time.Time
 	Minutes   int
+}
+
+func (h *HourlyUsageEntry) ResourceName() string {
+	return fmt.Sprintf("%v:%v:%v", h.Project, h.Workspace, h.Name)
+}
+
+func (h *HourlyUsageEntry) ObjectKey() client.ObjectKey {
+	return client.ObjectKey{
+		Name: h.ResourceName(),
+	}
 }

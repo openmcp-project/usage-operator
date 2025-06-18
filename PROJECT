@@ -6,6 +6,7 @@ cliVersion: 4.6.0
 domain: openmcp.cloud
 layout:
 - go.kubebuilder.io/v4
+multigroup: true
 projectName: usage-operator
 repo: github.com/openmcp-project/usage-operator
 resources:
@@ -16,4 +17,13 @@ resources:
   kind: ManagedControlPlane
   path: github.com/openmcp-project/mcp-operator/api/core/v1alpha1
   version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: openmcp.cloud
+  group: usage
+  kind: MCPDaily
+  path: github.com/openmcp-project/usage-operator/api/usage/v1
+  version: v1
 version: "3"

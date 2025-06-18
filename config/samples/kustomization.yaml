@@ -1,0 +1,4 @@
+## Append samples of your project ##
+resources:
+- usage_v1_mcpdaily.yaml
+# +kubebuilder:scaffold:manifestskustomizesamples

@@ -1,0 +1,9 @@
+apiVersion: usage.openmcp.cloud/v1
+kind: MCPDaily
+metadata:
+  labels:
+    app.kubernetes.io/name: usage-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: mcpdaily-sample
+spec:
+  # TODO(user): Add fields here
