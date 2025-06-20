@@ -6,20 +6,20 @@ metadata:
     controller-gen.kubebuilder.io/version: v0.18.0
   labels:
     openmcp.cloud/cluster: onboarding
-  name: mcpdailies.usage.openmcp.cloud
+  name: mcpusages.usage.openmcp.cloud
 spec:
   group: usage.openmcp.cloud
   names:
-    kind: MCPDaily
-    listKind: MCPDailyList
-    plural: mcpdailies
-    singular: mcpdaily
+    kind: MCPUsage
+    listKind: MCPUsageList
+    plural: mcpusages
+    singular: mcpusage
   scope: Cluster
   versions:
   - name: v1
     schema:
       openAPIV3Schema:
-        description: MCPDaily is the Schema for the mcpdailies API.
+        description: MCPUsage is the Schema for the mcpdailies API.
         properties:
           apiVersion:
             description: |-
@@ -39,10 +39,10 @@ spec:
           metadata:
             type: object
           spec:
-            description: MCPDailySpec defines the desired state of MCPDaily.
+            description: MCPUsageSpec defines the desired state of MCPUsage.
             type: object
           status:
-            description: MCPDailyStatus defines the observed state of MCPDaily.
+            description: MCPUsageStatus defines the observed state of MCPUsage.
             properties:
               charging_target:
                 description: |-
@@ -55,11 +55,11 @@ spec:
                     date:
                       format: date-time
                       type: string
-                    hours:
+                    usage:
                       type: string
                   required:
                   - date
-                  - hours
+                  - usage
                   type: object
                 type: array
               mcp:

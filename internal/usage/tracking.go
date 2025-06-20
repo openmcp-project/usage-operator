@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/openmcp-project/controller-utils/pkg/logging"
+
 	v1 "github.com/openmcp-project/usage-operator/api/usage/v1"
 	"github.com/openmcp-project/usage-operator/internal/helper"
 )
@@ -134,13 +135,11 @@ func (u *UsageTracker) DeletionEvent(ctx context.Context, project string, worksp
 	}
 
 	// Calculate usage until deletion
-	usage := deletion_timestamp.Sub(last_usage_capture)
-
-	minutes := int(math.Ceil(usage.Abs().Minutes()))
+	usage := deletion_timestamp.Sub(last_usage_capture).Abs()
 
 	u.lock.Lock()
 	defer u.lock.Unlock()
-	err = u.trackUsage(ctx, project, workspace, mcp_name, time.Now().UTC(), minutes)
+	err = u.trackUsage(ctx, project, workspace, mcp_name, time.Now().UTC(), usage)
 	if err != nil {
 		return err
 	}
@@ -156,7 +155,6 @@ func (u *UsageTracker) ScheduledEvent(ctx context.Context) error {
 	log.Info("tracking hourly usage for mcps " + hourStart.Format(time.DateTime))
 
 	u.lock.RLock()
-	log.Debug("getting data from db")
 	query := "SELECT project, workspace, mcp, last_usage_capture, deleted_at FROM mcp"
 	rows, err := u.db.QueryContext(ctx, query)
 	if err != nil {
@@ -186,12 +184,10 @@ func (u *UsageTracker) ScheduledEvent(ctx context.Context) error {
 			continue
 		}
 
-		consumedDuration := hourStart.Sub(trackingEntry.LastUsageCapture)
-		if consumedDuration <= 0 {
+		if hourStart.Compare(trackingEntry.LastUsageCapture) == -1 {
 			// BillingCycleStart is in future, so no need for calculating it.
 			continue
 		}
-		consumedMinutes := int(math.Ceil(consumedDuration.Minutes()))
 
 		query := "UPDATE mcp SET last_usage_capture = ? WHERE project = ? AND workspace = ? AND mcp = ?"
 		_, err := u.db.ExecContext(ctx, query, hourStart, trackingEntry.Project, trackingEntry.Workspace, trackingEntry.Name)
@@ -199,10 +195,23 @@ func (u *UsageTracker) ScheduledEvent(ctx context.Context) error {
 			return err
 		}
 
-		err = u.trackUsage(ctx, trackingEntry.Project, trackingEntry.Workspace, trackingEntry.Name, hourStart, consumedMinutes)
-		if err != nil {
-			return err
+		usagePerDay := calculateUsage(trackingEntry.LastUsageCapture, hourStart)
+		log.Debug("Usage hours by day", "start", trackingEntry.LastUsageCapture, "end", hourStart)
+		for _, usage := range usagePerDay {
+			log.Debug("  usage:", "date", usage.date, "duration", usage.duration)
 		}
+
+		var errs error
+		for _, usage := range usagePerDay {
+			err = u.trackUsage(ctx, trackingEntry.Project, trackingEntry.Workspace, trackingEntry.Name, usage.date, usage.duration)
+			if err != nil {
+				errs = errors.Join(errs, err)
+			}
+		}
+		if errs != nil {
+			return errs
+		}
+
 	}
 
 	log.Info("done tracking hourly usage " + hourStart.Format(time.DateTime))
@@ -210,9 +219,9 @@ func (u *UsageTracker) ScheduledEvent(ctx context.Context) error {
 	return nil
 }
 
-func (u *UsageTracker) trackUsage(ctx context.Context, project string, workspace string, mcp_name string, timestamp time.Time, minutes int) error {
+func (u *UsageTracker) trackUsage(ctx context.Context, project string, workspace string, mcp_name string, timestamp time.Time, duration time.Duration) error {
 	sql := "INSERT INTO hourly_usage (project, workspace, mcp, timestamp, minutes) VALUES (?, ?, ?, ?, ?) ON CONFLICT DO UPDATE SET minutes = EXCLUDED.minutes"
-	_, err := u.db.ExecContext(ctx, sql, project, workspace, mcp_name, timestamp, minutes, minutes)
+	_, err := u.db.ExecContext(ctx, sql, project, workspace, mcp_name, timestamp, duration.Minutes(), duration.Minutes())
 	if err != nil {
 		return err
 	}
@@ -268,45 +277,45 @@ func (u *UsageTracker) WriteToResource(ctx context.Context, client client.Client
 
 		resourceExistsBefore := true
 
-		var mcpDaily v1.MCPDaily
-		err = client.Get(ctx, hourlyUsage.ObjectKey(), &mcpDaily)
+		var mcpUsage v1.MCPUsage
+		err = client.Get(ctx, hourlyUsage.ObjectKey(), &mcpUsage)
 		if k8serrors.IsNotFound(err) {
 			resourceExistsBefore = false
 		} else if err != nil {
-			errs = errors.Join(errs, fmt.Errorf("error at getting MCPDaily resource for %v: %w", hourlyUsage.ResourceName(), err))
+			errs = errors.Join(errs, fmt.Errorf("error at getting MCPUsage resource for %v: %w", hourlyUsage.ResourceName(), err))
 			continue
 		}
 
-		mcpDaily.Name = hourlyUsage.ResourceName()
+		mcpUsage.Name = hourlyUsage.ResourceName()
 		usage, err := v1.NewDailyUsage(hourlyUsage.Timestamp, hours)
 		if err != nil {
 			errs = errors.Join(errs, fmt.Errorf("unable to create DailyUsage entry for %v: %w", hourlyUsage.ResourceName(), err))
 		}
 
 		if !resourceExistsBefore {
-			err = client.Create(ctx, &mcpDaily)
+			err = client.Create(ctx, &mcpUsage)
 			if err != nil {
-				errs = errors.Join(errs, fmt.Errorf("error at creating MCPDaily resource for %v: %w", hourlyUsage.ResourceName(), err))
+				errs = errors.Join(errs, fmt.Errorf("error at creating MCPUsage resource for %v: %w", hourlyUsage.ResourceName(), err))
 				continue
 			}
 		}
 
-		mcpDaily.Status.ChargingTarget = chargingTarget
+		mcpUsage.Status.ChargingTarget = chargingTarget
 
 		found := false
-		for idx := range mcpDaily.Status.Usage {
-			if mcpDaily.Status.Usage[idx].Date.Equal(&usage.Date) {
-				mcpDaily.Status.Usage[idx].Usage = usage.Usage
+		for idx := range mcpUsage.Status.Usage {
+			if mcpUsage.Status.Usage[idx].Date.Equal(&usage.Date) {
+				mcpUsage.Status.Usage[idx].Usage = usage.Usage
 				found = true
 			}
 		}
 		if !found {
-			mcpDaily.Status.Usage = append(mcpDaily.Status.Usage, usage)
+			mcpUsage.Status.Usage = append(mcpUsage.Status.Usage, usage)
 		}
 
-		err = client.Status().Update(ctx, &mcpDaily)
+		err = client.Status().Update(ctx, &mcpUsage)
 		if err != nil {
-			errs = errors.Join(errs, fmt.Errorf("error at updating MCPDaily status resource for %v: %w", hourlyUsage.ResourceName(), err))
+			errs = errors.Join(errs, fmt.Errorf("error at updating MCPUsage status resource for %v: %w", hourlyUsage.ResourceName(), err))
 			continue
 		}
 	}

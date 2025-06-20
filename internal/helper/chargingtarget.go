@@ -47,19 +47,26 @@ func ResolveChargingTarget(ctx context.Context, client k8s.Client, projectName s
 		return "", fmt.Errorf("error when getting mcp %v: %w", mcpName, err)
 	}
 
+	foundOne := false
 	chargingTarget, ok := project.GetLabels()[labelChargingTarget]
-	if !ok {
-		return "", fmt.Errorf("can't find charging target on project %v: %w", projectName, err)
+	if ok {
+		foundOne = true
 	}
 
 	wsChargingTarget, ok := workspace.GetLabels()[labelChargingTarget]
 	if ok {
+		foundOne = true
 		chargingTarget = wsChargingTarget
 	}
 
 	mcpChargingTarget, ok := mcp.GetLabels()[labelChargingTarget]
 	if ok {
+		foundOne = true
 		chargingTarget = mcpChargingTarget
+	}
+
+	if !foundOne {
+		return "", fmt.Errorf("can't find any charging target for project(%s) workspace(%s) mcp(%s)", projectName, workspaceName, mcpName)
 	}
 
 	return chargingTarget, nil

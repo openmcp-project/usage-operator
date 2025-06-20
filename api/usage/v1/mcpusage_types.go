@@ -26,11 +26,11 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// MCPDailySpec defines the desired state of MCPDaily.
-type MCPDailySpec struct{}
+// MCPUsageSpec defines the desired state of MCPUsage.
+type MCPUsageSpec struct{}
 
-// MCPDailyStatus defines the observed state of MCPDaily.
-type MCPDailyStatus struct {
+// MCPUsageStatus defines the observed state of MCPUsage.
+type MCPUsageStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 	ChargingTarget string       `json:"charging_target"`
@@ -42,7 +42,7 @@ type MCPDailyStatus struct {
 
 type DailyUsage struct {
 	Date  metav1.Time     `json:"date"`
-	Usage metav1.Duration `json:"hours"`
+	Usage metav1.Duration `json:"usage"`
 }
 
 func NewDailyUsage(date time.Time, hours int) (DailyUsage, error) {
@@ -64,24 +64,24 @@ func NewDailyUsage(date time.Time, hours int) (DailyUsage, error) {
 // +kubebuilder:resource:scope=Cluster
 // +kubebuilder:metadata:labels="openmcp.cloud/cluster=onboarding"
 
-// MCPDaily is the Schema for the mcpdailies API.
-type MCPDaily struct {
+// MCPUsage is the Schema for the mcpdailies API.
+type MCPUsage struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   MCPDailySpec   `json:"spec,omitempty"`
-	Status MCPDailyStatus `json:"status,omitempty"`
+	Spec   MCPUsageSpec   `json:"spec,omitempty"`
+	Status MCPUsageStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 
-// MCPDailyList contains a list of MCPDaily.
-type MCPDailyList struct {
+// MCPUsageList contains a list of MCPUsage.
+type MCPUsageList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []MCPDaily `json:"items"`
+	Items           []MCPUsage `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&MCPDaily{}, &MCPDailyList{})
+	SchemeBuilder.Register(&MCPUsage{}, &MCPUsageList{})
 }
