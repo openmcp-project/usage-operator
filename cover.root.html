@@ -1,0 +1,1713 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>crds: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">github.com/openmcp-project/usage-operator/api/crds/crds.go (0.0%)</option>
+				
+				<option value="file1">github.com/openmcp-project/usage-operator/api/usage/v1/mcpusage_types.go (0.0%)</option>
+				
+				<option value="file2">github.com/openmcp-project/usage-operator/api/usage/v1/zz_generated.deepcopy.go (0.0%)</option>
+				
+				<option value="file3">github.com/openmcp-project/usage-operator/cmd/usage-operator/app/app.go (0.0%)</option>
+				
+				<option value="file4">github.com/openmcp-project/usage-operator/cmd/usage-operator/app/init.go (0.0%)</option>
+				
+				<option value="file5">github.com/openmcp-project/usage-operator/cmd/usage-operator/app/run.go (0.0%)</option>
+				
+				<option value="file6">github.com/openmcp-project/usage-operator/cmd/usage-operator/app/uninstall.go (0.0%)</option>
+				
+				<option value="file7">github.com/openmcp-project/usage-operator/cmd/usage-operator/main.go (0.0%)</option>
+				
+				<option value="file8">github.com/openmcp-project/usage-operator/internal/controller/managedcontrolplane_controller.go (0.0%)</option>
+				
+				<option value="file9">github.com/openmcp-project/usage-operator/internal/helper/chargingtarget.go (0.0%)</option>
+				
+				<option value="file10">github.com/openmcp-project/usage-operator/internal/runnable/UsageRunnable.go (0.0%)</option>
+				
+				<option value="file11">github.com/openmcp-project/usage-operator/internal/usage/db.go (84.0%)</option>
+				
+				<option value="file12">github.com/openmcp-project/usage-operator/internal/usage/helper.go (100.0%)</option>
+				
+				<option value="file13">github.com/openmcp-project/usage-operator/internal/usage/tracking.go (0.0%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package crds
+
+import (
+        "embed"
+
+        crdutil "github.com/openmcp-project/controller-utils/pkg/crds"
+        apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+)
+
+//go:embed manifests
+var CRDFS embed.FS
+
+func CRDs() ([]*apiextv1.CustomResourceDefinition, error) <span class="cov0" title="0">{
+        return crdutil.CRDsFromFileSystem(CRDFS, "manifests")
+}</span>
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">/*
+Copyright 2025.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package v1
+
+import (
+        "fmt"
+        "time"
+
+        metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
+// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+
+// MCPUsageSpec defines the desired state of MCPUsage.
+type MCPUsageSpec struct{}
+
+// MCPUsageStatus defines the observed state of MCPUsage.
+type MCPUsageStatus struct {
+        // INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
+        // Important: Run "make" to regenerate code after modifying this file
+        ChargingTarget string       `json:"charging_target"`
+        Project        string       `json:"project"`
+        Workspace      string       `json:"workspace"`
+        MCP            string       `json:"mcp"`
+        Usage          []DailyUsage `json:"daily_usage"`
+}
+
+type DailyUsage struct {
+        Date  metav1.Time     `json:"date"`
+        Usage metav1.Duration `json:"usage"`
+}
+
+func NewDailyUsage(date time.Time, hours int) (DailyUsage, error) <span class="cov0" title="0">{
+        duration, err := time.ParseDuration(fmt.Sprintf("%vh", hours))
+        if err != nil </span><span class="cov0" title="0">{
+                return DailyUsage{}, err
+        }</span>
+
+        <span class="cov0" title="0">return DailyUsage{
+                Date: metav1.NewTime(date),
+                Usage: metav1.Duration{
+                        Duration: duration,
+                },
+        }, nil</span>
+}
+
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:scope=Cluster
+// +kubebuilder:metadata:labels="openmcp.cloud/cluster=onboarding"
+
+// MCPUsage is the Schema for the mcpdailies API.
+type MCPUsage struct {
+        metav1.TypeMeta   `json:",inline"`
+        metav1.ObjectMeta `json:"metadata,omitempty"`
+
+        Spec   MCPUsageSpec   `json:"spec,omitempty"`
+        Status MCPUsageStatus `json:"status,omitempty"`
+}
+
+// +kubebuilder:object:root=true
+
+// MCPUsageList contains a list of MCPUsage.
+type MCPUsageList struct {
+        metav1.TypeMeta `json:",inline"`
+        metav1.ListMeta `json:"metadata,omitempty"`
+        Items           []MCPUsage `json:"items"`
+}
+
+func init() <span class="cov0" title="0">{
+        SchemeBuilder.Register(&amp;MCPUsage{}, &amp;MCPUsageList{})
+}</span>
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">//go:build !ignore_autogenerated
+
+// Code generated by controller-gen. DO NOT EDIT.
+
+package v1
+
+import (
+        runtime "k8s.io/apimachinery/pkg/runtime"
+)
+
+// DeepCopyInto is an autogenerated deepcopy function, copying the receiver, writing into out. in must be non-nil.
+func (in *DailyUsage) DeepCopyInto(out *DailyUsage) <span class="cov0" title="0">{
+        *out = *in
+        in.Date.DeepCopyInto(&amp;out.Date)
+        out.Usage = in.Usage
+}</span>
+
+// DeepCopy is an autogenerated deepcopy function, copying the receiver, creating a new DailyUsage.
+func (in *DailyUsage) DeepCopy() *DailyUsage <span class="cov0" title="0">{
+        if in == nil </span><span class="cov0" title="0">{
+                return nil
+        }</span>
+        <span class="cov0" title="0">out := new(DailyUsage)
+        in.DeepCopyInto(out)
+        return out</span>
+}
+
+// DeepCopyInto is an autogenerated deepcopy function, copying the receiver, writing into out. in must be non-nil.
+func (in *MCPUsage) DeepCopyInto(out *MCPUsage) <span class="cov0" title="0">{
+        *out = *in
+        out.TypeMeta = in.TypeMeta
+        in.ObjectMeta.DeepCopyInto(&amp;out.ObjectMeta)
+        out.Spec = in.Spec
+        in.Status.DeepCopyInto(&amp;out.Status)
+}</span>
+
+// DeepCopy is an autogenerated deepcopy function, copying the receiver, creating a new MCPUsage.
+func (in *MCPUsage) DeepCopy() *MCPUsage <span class="cov0" title="0">{
+        if in == nil </span><span class="cov0" title="0">{
+                return nil
+        }</span>
+        <span class="cov0" title="0">out := new(MCPUsage)
+        in.DeepCopyInto(out)
+        return out</span>
+}
+
+// DeepCopyObject is an autogenerated deepcopy function, copying the receiver, creating a new runtime.Object.
+func (in *MCPUsage) DeepCopyObject() runtime.Object <span class="cov0" title="0">{
+        if c := in.DeepCopy(); c != nil </span><span class="cov0" title="0">{
+                return c
+        }</span>
+        <span class="cov0" title="0">return nil</span>
+}
+
+// DeepCopyInto is an autogenerated deepcopy function, copying the receiver, writing into out. in must be non-nil.
+func (in *MCPUsageList) DeepCopyInto(out *MCPUsageList) <span class="cov0" title="0">{
+        *out = *in
+        out.TypeMeta = in.TypeMeta
+        in.ListMeta.DeepCopyInto(&amp;out.ListMeta)
+        if in.Items != nil </span><span class="cov0" title="0">{
+                in, out := &amp;in.Items, &amp;out.Items
+                *out = make([]MCPUsage, len(*in))
+                for i := range *in </span><span class="cov0" title="0">{
+                        (*in)[i].DeepCopyInto(&amp;(*out)[i])
+                }</span>
+        }
+}
+
+// DeepCopy is an autogenerated deepcopy function, copying the receiver, creating a new MCPUsageList.
+func (in *MCPUsageList) DeepCopy() *MCPUsageList <span class="cov0" title="0">{
+        if in == nil </span><span class="cov0" title="0">{
+                return nil
+        }</span>
+        <span class="cov0" title="0">out := new(MCPUsageList)
+        in.DeepCopyInto(out)
+        return out</span>
+}
+
+// DeepCopyObject is an autogenerated deepcopy function, copying the receiver, creating a new runtime.Object.
+func (in *MCPUsageList) DeepCopyObject() runtime.Object <span class="cov0" title="0">{
+        if c := in.DeepCopy(); c != nil </span><span class="cov0" title="0">{
+                return c
+        }</span>
+        <span class="cov0" title="0">return nil</span>
+}
+
+// DeepCopyInto is an autogenerated deepcopy function, copying the receiver, writing into out. in must be non-nil.
+func (in *MCPUsageSpec) DeepCopyInto(out *MCPUsageSpec) <span class="cov0" title="0">{
+        *out = *in
+}</span>
+
+// DeepCopy is an autogenerated deepcopy function, copying the receiver, creating a new MCPUsageSpec.
+func (in *MCPUsageSpec) DeepCopy() *MCPUsageSpec <span class="cov0" title="0">{
+        if in == nil </span><span class="cov0" title="0">{
+                return nil
+        }</span>
+        <span class="cov0" title="0">out := new(MCPUsageSpec)
+        in.DeepCopyInto(out)
+        return out</span>
+}
+
+// DeepCopyInto is an autogenerated deepcopy function, copying the receiver, writing into out. in must be non-nil.
+func (in *MCPUsageStatus) DeepCopyInto(out *MCPUsageStatus) <span class="cov0" title="0">{
+        *out = *in
+        if in.Usage != nil </span><span class="cov0" title="0">{
+                in, out := &amp;in.Usage, &amp;out.Usage
+                *out = make([]DailyUsage, len(*in))
+                for i := range *in </span><span class="cov0" title="0">{
+                        (*in)[i].DeepCopyInto(&amp;(*out)[i])
+                }</span>
+        }
+}
+
+// DeepCopy is an autogenerated deepcopy function, copying the receiver, creating a new MCPUsageStatus.
+func (in *MCPUsageStatus) DeepCopy() *MCPUsageStatus <span class="cov0" title="0">{
+        if in == nil </span><span class="cov0" title="0">{
+                return nil
+        }</span>
+        <span class="cov0" title="0">out := new(MCPUsageStatus)
+        in.DeepCopyInto(out)
+        return out</span>
+}
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">package app
+
+import (
+        "context"
+        "fmt"
+        "os"
+
+        "github.com/openmcp-project/controller-utils/pkg/logging"
+        "github.com/spf13/cobra"
+
+        ctrl "sigs.k8s.io/controller-runtime"
+        "sigs.k8s.io/yaml"
+)
+
+func NewUsageOperatorCommand(ctx context.Context) *cobra.Command <span class="cov0" title="0">{
+        cmd := &amp;cobra.Command{
+                Use:   "usage-operator",
+                Short: "Commands for interacting with the usage-operator",
+        }
+        cmd.SetOut(os.Stdout)
+        cmd.SetErr(os.Stderr)
+
+        so := &amp;SharedOptions{
+                RawSharedOptions: &amp;RawSharedOptions{},
+        }
+
+        so.AddPersistentFlags(cmd)
+        cmd.AddCommand(NewInitCommand(so))
+        cmd.AddCommand(NewRunCommand(so))
+        cmd.AddCommand(NewUninstallCommand(so))
+
+        return cmd
+}</span>
+
+type RawSharedOptions struct {
+        DryRun bool `json:"dry-run"`
+}
+
+type SharedOptions struct {
+        *RawSharedOptions
+
+        // fields filled in Complete()
+        Log logging.Logger
+}
+
+func (o *SharedOptions) AddPersistentFlags(cmd *cobra.Command) <span class="cov0" title="0">{
+        // logging
+        logging.InitFlags(cmd.PersistentFlags())
+        // misc
+        cmd.PersistentFlags().BoolVar(&amp;o.DryRun, "dry-run", false, "If set, the command aborts after evaluation of the given flags.")
+}</span>
+
+func (o *SharedOptions) Complete() error <span class="cov0" title="0">{
+        // build logger
+        log, err := logging.GetLogger()
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov0" title="0">o.Log = log
+        ctrl.SetLogger(o.Log.Logr())
+
+        return nil</span>
+}
+
+func (o *SharedOptions) PrintRaw(cmd *cobra.Command) <span class="cov0" title="0">{
+        data, err := yaml.Marshal(o.RawSharedOptions)
+        if err != nil </span><span class="cov0" title="0">{
+                cmd.Println(fmt.Errorf("error marshalling raw shared options: %w", err).Error())
+                return
+        }</span>
+        <span class="cov0" title="0">cmd.Print(string(data))</span>
+}
+
+func (o *SharedOptions) PrintCompleted(cmd *cobra.Command) <span class="cov0" title="0">{
+        raw := map[string]any{}
+        data, err := yaml.Marshal(raw)
+        if err != nil </span><span class="cov0" title="0">{
+                cmd.Println(fmt.Errorf("error marshalling completed shared options: %w", err).Error())
+                return
+        }</span>
+        <span class="cov0" title="0">cmd.Print(string(data))</span>
+}
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">package app
+
+import (
+        "context"
+        "fmt"
+
+        "github.com/openmcp-project/controller-utils/pkg/clusters"
+        crdutil "github.com/openmcp-project/controller-utils/pkg/crds"
+        apiconst "github.com/openmcp-project/openmcp-operator/api/constants"
+        "github.com/openmcp-project/openmcp-operator/api/install"
+        "github.com/spf13/cobra"
+        "k8s.io/apimachinery/pkg/runtime"
+
+        ctrl "sigs.k8s.io/controller-runtime"
+
+        "github.com/openmcp-project/usage-operator/api/crds"
+)
+
+func NewInitCommand(so *SharedOptions) *cobra.Command <span class="cov0" title="0">{
+        opts := &amp;InitOptions{
+                SharedOptions: so,
+        }
+        cmd := &amp;cobra.Command{
+                Use:   "init",
+                Short: "Initialize the usage operator",
+                Run: func(cmd *cobra.Command, args []string) </span><span class="cov0" title="0">{
+                        if err := opts.Complete(cmd.Context()); err != nil </span><span class="cov0" title="0">{
+                                panic(fmt.Errorf("error completing options: %w", err))</span>
+                        }
+                        <span class="cov0" title="0">opts.PrintCompletedOptions(cmd)
+                        if opts.DryRun </span><span class="cov0" title="0">{
+                                cmd.Println("=== END OF DRY RUN ===")
+                                return
+                        }</span>
+                        <span class="cov0" title="0">if err := opts.Run(cmd.Context()); err != nil </span><span class="cov0" title="0">{
+                                panic(err)</span>
+                        }
+                },
+        }
+        <span class="cov0" title="0">opts.AddFlags(cmd)
+
+        return cmd</span>
+}
+
+type InitOptions struct {
+        *SharedOptions
+}
+
+func (o *InitOptions) AddFlags(cmd *cobra.Command) {<span class="cov0" title="0">
+}</span>
+
+func (o *InitOptions) Complete(ctx context.Context) error <span class="cov0" title="0">{
+        if err := o.SharedOptions.Complete(); err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov0" title="0">return nil</span>
+}
+
+func (o *InitOptions) Run(ctx context.Context) error <span class="cov0" title="0">{
+        log := o.Log.WithName("main")
+
+        // apply CRDs
+        crdManager := crdutil.NewCRDManager(apiconst.ClusterLabel, crds.CRDs)
+
+        var cluster clusters.Cluster
+        cluster.WithRESTConfig(ctrl.GetConfigOrDie())
+
+        if err := cluster.InitializeClient(install.InstallCRDAPIs(runtime.NewScheme())); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("error initializing client: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">crdManager.AddCRDLabelToClusterMapping("onboarding", &amp;cluster)
+
+        if err := crdManager.CreateOrUpdateCRDs(ctx, &amp;log); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("error creating/updating CRDs: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">log.Info("Finished init command")
+        return nil</span>
+}
+
+func (o *InitOptions) PrintCompleted(cmd *cobra.Command) {<span class="cov0" title="0">}</span>
+
+func (o *InitOptions) PrintCompletedOptions(cmd *cobra.Command) <span class="cov0" title="0">{
+        cmd.Println("########## COMPLETED OPTIONS START ##########")
+        o.SharedOptions.PrintCompleted(cmd)
+        o.PrintCompleted(cmd)
+        cmd.Println("########## COMPLETED OPTIONS END ##########")
+}</span>
+</pre>
+		
+		<pre class="file" id="file5" style="display: none">package app
+
+import (
+        "context"
+        "crypto/tls"
+        "fmt"
+        "path/filepath"
+
+        "github.com/spf13/cobra"
+        "k8s.io/apimachinery/pkg/runtime"
+        ctrl "sigs.k8s.io/controller-runtime"
+        "sigs.k8s.io/controller-runtime/pkg/certwatcher"
+        "sigs.k8s.io/controller-runtime/pkg/healthz"
+        "sigs.k8s.io/controller-runtime/pkg/metrics/filters"
+        metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+        "sigs.k8s.io/controller-runtime/pkg/webhook"
+        "sigs.k8s.io/yaml"
+
+        "github.com/openmcp-project/controller-utils/pkg/logging"
+        corev1alpha1 "github.com/openmcp-project/mcp-operator/api/core/v1alpha1"
+        pwcorev1alpha1 "github.com/openmcp-project/project-workspace-operator/api/core/v1alpha1"
+        utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+        clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+
+        usagev1 "github.com/openmcp-project/usage-operator/api/usage/v1"
+
+        "github.com/openmcp-project/usage-operator/internal/controller"
+        "github.com/openmcp-project/usage-operator/internal/runnable"
+        "github.com/openmcp-project/usage-operator/internal/usage"
+)
+
+var setupLog logging.Logger
+
+var (
+        scheme = runtime.NewScheme()
+)
+
+func init() <span class="cov0" title="0">{
+        utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+
+        utilruntime.Must(corev1alpha1.AddToScheme(scheme))
+        utilruntime.Must(pwcorev1alpha1.AddToScheme(scheme))
+        utilruntime.Must(usagev1.AddToScheme(scheme))
+        // +kubebuilder:scaffold:scheme
+}</span>
+
+func NewRunCommand(so *SharedOptions) *cobra.Command <span class="cov0" title="0">{
+        opts := &amp;RunOptions{
+                SharedOptions: so,
+        }
+        cmd := &amp;cobra.Command{
+                Use:   "run",
+                Short: "Run the usage operator",
+                Run: func(cmd *cobra.Command, args []string) </span><span class="cov0" title="0">{
+                        opts.PrintRawOptions(cmd)
+                        if err := opts.Complete(cmd.Context()); err != nil </span><span class="cov0" title="0">{
+                                panic(fmt.Errorf("error completing options: %w", err))</span>
+                        }
+                        <span class="cov0" title="0">opts.PrintCompletedOptions(cmd)
+                        if opts.DryRun </span><span class="cov0" title="0">{
+                                cmd.Println("=== END OF DRY RUN ===")
+                                return
+                        }</span>
+                        <span class="cov0" title="0">if err := opts.Run(cmd.Context()); err != nil </span><span class="cov0" title="0">{
+                                panic(err)</span>
+                        }
+                },
+        }
+        <span class="cov0" title="0">opts.AddFlags(cmd)
+
+        return cmd</span>
+}
+
+func (o *RunOptions) AddFlags(cmd *cobra.Command) <span class="cov0" title="0">{
+        // kubebuilder default flags
+        cmd.Flags().StringVar(&amp;o.MetricsAddr, "metrics-bind-address", "0", "The address the metrics endpoint binds to. Use :8443 for HTTPS or :8080 for HTTP, or leave as 0 to disable the metrics service.")
+        cmd.Flags().StringVar(&amp;o.ProbeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
+        cmd.Flags().StringVar(&amp;o.PprofAddr, "pprof-bind-address", "", "The address the pprof endpoint binds to. Expected format is ':&lt;port&gt;'. Leave empty to disable pprof endpoint.")
+        cmd.Flags().BoolVar(&amp;o.EnableLeaderElection, "leader-elect", false, "Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.")
+        cmd.Flags().BoolVar(&amp;o.SecureMetrics, "metrics-secure", true, "If set, the metrics endpoint is served securely via HTTPS. Use --metrics-secure=false to use HTTP instead.")
+        cmd.Flags().StringVar(&amp;o.WebhookCertPath, "webhook-cert-path", "", "The directory that contains the webhook certificate.")
+        cmd.Flags().StringVar(&amp;o.WebhookCertName, "webhook-cert-name", "tls.crt", "The name of the webhook certificate file.")
+        cmd.Flags().StringVar(&amp;o.WebhookCertKey, "webhook-cert-key", "tls.key", "The name of the webhook key file.")
+        cmd.Flags().StringVar(&amp;o.MetricsCertPath, "metrics-cert-path", "", "The directory that contains the metrics server certificate.")
+        cmd.Flags().StringVar(&amp;o.MetricsCertName, "metrics-cert-name", "tls.crt", "The name of the metrics server certificate file.")
+        cmd.Flags().StringVar(&amp;o.MetricsCertKey, "metrics-cert-key", "tls.key", "The name of the metrics server key file.")
+        cmd.Flags().BoolVar(&amp;o.EnableHTTP2, "enable-http2", false, "If set, HTTP/2 will be enabled for the metrics and webhook servers")
+}</span>
+
+type RawRunOptions struct {
+        // kubebuilder default flags
+        MetricsAddr          string `json:"metrics-bind-address"`
+        MetricsCertPath      string `json:"metrics-cert-path"`
+        MetricsCertName      string `json:"metrics-cert-name"`
+        MetricsCertKey       string `json:"metrics-cert-key"`
+        WebhookCertPath      string `json:"webhook-cert-path"`
+        WebhookCertName      string `json:"webhook-cert-name"`
+        WebhookCertKey       string `json:"webhook-cert-key"`
+        EnableLeaderElection bool   `json:"leader-elect"`
+        ProbeAddr            string `json:"health-probe-bind-address"`
+        PprofAddr            string `json:"pprof-bind-address"`
+        SecureMetrics        bool   `json:"metrics-secure"`
+        EnableHTTP2          bool   `json:"enable-http2"`
+}
+
+type RunOptions struct {
+        *SharedOptions
+        RawRunOptions
+
+        // fields filled in Complete()
+        TLSOpts              []func(*tls.Config)
+        WebhookTLSOpts       []func(*tls.Config)
+        MetricsServerOptions metricsserver.Options
+        MetricsCertWatcher   *certwatcher.CertWatcher
+        WebhookCertWatcher   *certwatcher.CertWatcher
+}
+
+func (o *RunOptions) PrintRaw(cmd *cobra.Command) <span class="cov0" title="0">{
+        data, err := yaml.Marshal(o.RawRunOptions)
+        if err != nil </span><span class="cov0" title="0">{
+                cmd.Println(fmt.Errorf("error marshalling raw options: %w", err).Error())
+                return
+        }</span>
+        <span class="cov0" title="0">cmd.Print(string(data))</span>
+}
+
+func (o *RunOptions) PrintRawOptions(cmd *cobra.Command) <span class="cov0" title="0">{
+        cmd.Println("########## RAW OPTIONS START ##########")
+        o.SharedOptions.PrintRaw(cmd)
+        o.PrintRaw(cmd)
+        cmd.Println("########## RAW OPTIONS END ##########")
+}</span>
+
+func (o *RunOptions) Complete(ctx context.Context) error <span class="cov0" title="0">{
+        if err := o.SharedOptions.Complete(); err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov0" title="0">setupLog = o.Log.WithName("setup")
+        ctrl.SetLogger(o.Log.Logr())
+
+        // kubebuilder default stuff
+
+        // if the enable-http2 flag is false (the default), http/2 should be disabled
+        // due to its vulnerabilities. More specifically, disabling http/2 will
+        // prevent from being vulnerable to the HTTP/2 Stream Cancellation and
+        // Rapid Reset CVEs. For more information see:
+        // - https://github.com/advisories/GHSA-qppj-fm5r-hxr3
+        // - https://github.com/advisories/GHSA-4374-p667-p6c8
+        disableHTTP2 := func(c *tls.Config) </span><span class="cov0" title="0">{
+                setupLog.Info("Disabling http/2")
+                c.NextProtos = []string{"http/1.1"}
+        }</span>
+
+        <span class="cov0" title="0">if !o.EnableHTTP2 </span><span class="cov0" title="0">{
+                o.TLSOpts = append(o.TLSOpts, disableHTTP2)
+        }</span>
+
+        // Initial webhook TLS options
+        <span class="cov0" title="0">o.WebhookTLSOpts = o.TLSOpts
+
+        if len(o.WebhookCertPath) &gt; 0 </span><span class="cov0" title="0">{
+                setupLog.Info("Initializing webhook certificate watcher using provided certificates", "webhook-cert-path", o.WebhookCertPath, "webhook-cert-name", o.WebhookCertName, "webhook-cert-key", o.WebhookCertKey)
+
+                var err error
+                o.WebhookCertWatcher, err = certwatcher.New(
+                        filepath.Join(o.WebhookCertPath, o.WebhookCertName),
+                        filepath.Join(o.WebhookCertPath, o.WebhookCertKey),
+                )
+                if err != nil </span><span class="cov0" title="0">{
+                        return fmt.Errorf("failed to initialize webhook certificate watcher: %w", err)
+                }</span>
+
+                <span class="cov0" title="0">o.WebhookTLSOpts = append(o.WebhookTLSOpts, func(config *tls.Config) </span><span class="cov0" title="0">{
+                        config.GetCertificate = o.WebhookCertWatcher.GetCertificate
+                }</span>)
+        }
+
+        // More info:
+        // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.20.2/pkg/metrics/server
+        // - https://book.kubebuilder.io/reference/metrics.html
+        <span class="cov0" title="0">o.MetricsServerOptions = metricsserver.Options{
+                BindAddress:   o.MetricsAddr,
+                SecureServing: o.SecureMetrics,
+                TLSOpts:       o.TLSOpts,
+        }
+
+        if o.SecureMetrics </span><span class="cov0" title="0">{
+                // FilterProvider is used to protect the metrics endpoint with authn/authz.
+                // These configurations ensure that only authorized users and service accounts
+                // can access the metrics endpoint. The RBAC are configured in 'config/rbac/kustomization.yaml'. More info:
+                // https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.20.2/pkg/metrics/filters#WithAuthenticationAndAuthorization
+                o.MetricsServerOptions.FilterProvider = filters.WithAuthenticationAndAuthorization
+        }</span>
+
+        // If the certificate is not specified, controller-runtime will automatically
+        // generate self-signed certificates for the metrics server. While convenient for development and testing,
+        // this setup is not recommended for production.
+        //
+        // TODO(user): If you enable certManager, uncomment the following lines:
+        // - [METRICS-WITH-CERTS] at config/default/kustomization.yaml to generate and use certificates
+        // managed by cert-manager for the metrics server.
+        // - [PROMETHEUS-WITH-CERTS] at config/prometheus/kustomization.yaml for TLS certification.
+        <span class="cov0" title="0">if len(o.MetricsCertPath) &gt; 0 </span><span class="cov0" title="0">{
+                setupLog.Info("Initializing metrics certificate watcher using provided certificates", "metrics-cert-path", o.MetricsCertPath, "metrics-cert-name", o.MetricsCertName, "metrics-cert-key", o.MetricsCertKey)
+
+                var err error
+                o.MetricsCertWatcher, err = certwatcher.New(
+                        filepath.Join(o.MetricsCertPath, o.MetricsCertName),
+                        filepath.Join(o.MetricsCertPath, o.MetricsCertKey),
+                )
+                if err != nil </span><span class="cov0" title="0">{
+                        return fmt.Errorf("failed to initialize metrics certificate watcher: %w", err)
+                }</span>
+
+                <span class="cov0" title="0">o.MetricsServerOptions.TLSOpts = append(o.MetricsServerOptions.TLSOpts, func(config *tls.Config) </span><span class="cov0" title="0">{
+                        config.GetCertificate = o.MetricsCertWatcher.GetCertificate
+                }</span>)
+        }
+
+        <span class="cov0" title="0">return nil</span>
+}
+
+func (o *RunOptions) PrintCompleted(cmd *cobra.Command) <span class="cov0" title="0">{
+        rawData := map[string]any{}
+        data, err := yaml.Marshal(rawData)
+        if err != nil </span><span class="cov0" title="0">{
+                cmd.Println(fmt.Errorf("error marshalling completed options: %w", err).Error())
+                return
+        }</span>
+        <span class="cov0" title="0">cmd.Print(string(data))</span>
+}
+
+func (o *RunOptions) PrintCompletedOptions(cmd *cobra.Command) <span class="cov0" title="0">{
+        cmd.Println("########## COMPLETED OPTIONS START ##########")
+        o.SharedOptions.PrintCompleted(cmd)
+        o.PrintCompleted(cmd)
+        cmd.Println("########## COMPLETED OPTIONS END ##########")
+}</span>
+
+func (o *RunOptions) Run(ctx context.Context) error <span class="cov0" title="0">{
+        setupLog = o.Log.WithName("setup")
+
+        webhookServer := webhook.NewServer(webhook.Options{
+                TLSOpts: o.WebhookTLSOpts,
+        })
+
+        mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+                Scheme:                 scheme,
+                Metrics:                o.MetricsServerOptions,
+                WebhookServer:          webhookServer,
+                HealthProbeBindAddress: o.ProbeAddr,
+                PprofBindAddress:       o.PprofAddr,
+                LeaderElection:         o.EnableLeaderElection,
+                LeaderElectionID:       "github.com/openmcp-project/usage-operator",
+                // LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily
+                // when the Manager ends. This requires the binary to immediately end when the
+                // Manager is stopped, otherwise, this setting is unsafe. Setting this significantly
+                // speeds up voluntary leader transitions as the new leader don't have to wait
+                // LeaseDuration time first.
+                //
+                // In the default scaffold provided, the program ends immediately after
+                // the manager stops, so would be fine to enable this option. However,
+                // if you are doing or is intended to do any operation such as perform cleanups
+                // after the manager stops then its usage might be unsafe.
+                LeaderElectionReleaseOnCancel: true,
+        })
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("unable to create manager: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">err = usage.InitDB(context.Background(), &amp;setupLog)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("unable to initialize DB: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">usageTracker, err := usage.NewUsageTracker(&amp;o.Log)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("unable to create usage tracker: %w", err)
+        }</span>
+        <span class="cov0" title="0">defer func() </span><span class="cov0" title="0">{
+                err := usageTracker.Close()
+                if err != nil </span><span class="cov0" title="0">{
+                        setupLog.Error(err, "unable to close usage tracker")
+                }</span>
+        }()
+
+        <span class="cov0" title="0">runnable := runnable.NewUsageRunnable(mgr.GetClient(), usageTracker)
+        if err := mgr.Add(&amp;runnable); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("unable to add usage runnable: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">if err := (&amp;controller.ManagedControlPlaneReconciler{
+                Client:       mgr.GetClient(),
+                Scheme:       mgr.GetScheme(),
+                UsageTracker: usageTracker,
+        }).SetupWithManager(mgr); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("unable to create controller ManagedControlPlane: %w", err)
+        }</span>
+        // +kubebuilder:scaffold:builder
+
+        <span class="cov0" title="0">if o.MetricsCertWatcher != nil </span><span class="cov0" title="0">{
+                setupLog.Info("Adding metrics certificate watcher to manager")
+                if err := mgr.Add(o.MetricsCertWatcher); err != nil </span><span class="cov0" title="0">{
+                        return fmt.Errorf("unable to add metrics certificate watcher to manager: %w", err)
+                }</span>
+        }
+
+        <span class="cov0" title="0">if o.WebhookCertWatcher != nil </span><span class="cov0" title="0">{
+                setupLog.Info("Adding webhook certificate watcher to manager")
+                if err := mgr.Add(o.WebhookCertWatcher); err != nil </span><span class="cov0" title="0">{
+                        return fmt.Errorf("unable to add webhook certificate watcher to manager: %w", err)
+                }</span>
+        }
+
+        <span class="cov0" title="0">if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("unable to set up health check: %w", err)
+        }</span>
+        <span class="cov0" title="0">if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("unable to set up ready check: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">setupLog.Info("Starting manager")
+        if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("problem running manager: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">return nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file6" style="display: none">package app
+
+import (
+        "context"
+        "errors"
+        "fmt"
+
+        "github.com/openmcp-project/controller-utils/pkg/clusters"
+        "github.com/openmcp-project/controller-utils/pkg/resources"
+        "github.com/openmcp-project/openmcp-operator/api/install"
+        "github.com/spf13/cobra"
+        "k8s.io/apimachinery/pkg/runtime"
+        ctrl "sigs.k8s.io/controller-runtime"
+
+        "github.com/openmcp-project/usage-operator/api/crds"
+)
+
+func NewUninstallCommand(so *SharedOptions) *cobra.Command <span class="cov0" title="0">{
+        opts := &amp;UninstallOptions{
+                SharedOptions: so,
+        }
+        cmd := &amp;cobra.Command{
+                Use:   "uninstall",
+                Short: "Uninstalls the usage-operators crds",
+                Run: func(cmd *cobra.Command, args []string) </span><span class="cov0" title="0">{
+                        if err := opts.Complete(cmd.Context()); err != nil </span><span class="cov0" title="0">{
+                                panic(fmt.Errorf("error completing options: %w", err))</span>
+                        }
+                        <span class="cov0" title="0">opts.PrintCompletedOptions(cmd)
+                        if opts.DryRun </span><span class="cov0" title="0">{
+                                cmd.Println("=== END OF DRY RUN ===")
+                                return
+                        }</span>
+                        <span class="cov0" title="0">if err := opts.Run(cmd.Context()); err != nil </span><span class="cov0" title="0">{
+                                panic(err)</span>
+                        }
+                },
+        }
+        <span class="cov0" title="0">opts.AddFlags(cmd)
+
+        return cmd</span>
+}
+
+type UninstallOptions struct {
+        *SharedOptions
+}
+
+func (o *UninstallOptions) AddFlags(cmd *cobra.Command) {<span class="cov0" title="0">
+}</span>
+
+func (o *UninstallOptions) Complete(ctx context.Context) error <span class="cov0" title="0">{
+        if err := o.SharedOptions.Complete(); err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov0" title="0">return nil</span>
+}
+
+func (o *UninstallOptions) Run(ctx context.Context) error <span class="cov0" title="0">{
+        log := o.Log.WithName("main")
+
+        crdlist, err := crds.CRDs()
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("error when getting crds: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">var cluster clusters.Cluster
+        cluster.WithRESTConfig(ctrl.GetConfigOrDie())
+
+        if err := cluster.InitializeClient(install.InstallCRDAPIs(runtime.NewScheme())); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("error initializing client: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">var errs error
+        for _, crd := range crdlist </span><span class="cov0" title="0">{
+                log.Info("uninstalling CRD", "name", crd.Name)
+
+                m := resources.NewCRDMutator(crd)
+                m.MetadataMutator().WithLabels(crd.Labels).WithAnnotations(crd.Annotations)
+                err = resources.DeleteResource(ctx, cluster.Client(), m)
+                errs = errors.Join(errs, err)
+        }</span>
+
+        <span class="cov0" title="0">return errs</span>
+}
+
+func (o *UninstallOptions) PrintCompleted(cmd *cobra.Command) {<span class="cov0" title="0">}</span>
+
+func (o *UninstallOptions) PrintCompletedOptions(cmd *cobra.Command) <span class="cov0" title="0">{
+        cmd.Println("########## COMPLETED OPTIONS START ##########")
+        o.SharedOptions.PrintCompleted(cmd)
+        o.PrintCompleted(cmd)
+        cmd.Println("########## COMPLETED OPTIONS END ##########")
+}</span>
+</pre>
+		
+		<pre class="file" id="file7" style="display: none">package main
+
+import (
+        "context"
+        "fmt"
+        "os"
+
+        "github.com/openmcp-project/usage-operator/cmd/usage-operator/app"
+)
+
+func main() <span class="cov0" title="0">{
+        ctx := context.Background()
+        defer ctx.Done()
+        cmd := app.NewUsageOperatorCommand(ctx)
+
+        if err := cmd.Execute(); err != nil </span><span class="cov0" title="0">{
+                fmt.Print(err)
+                os.Exit(1)
+        }</span>
+}
+</pre>
+		
+		<pre class="file" id="file8" style="display: none">/*
+Copyright 2025.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package controller
+
+import (
+        "context"
+        "errors"
+        "regexp"
+
+        "github.com/openmcp-project/controller-utils/pkg/logging"
+        corev1alpha1 "github.com/openmcp-project/mcp-operator/api/core/v1alpha1"
+        "k8s.io/apimachinery/pkg/runtime"
+        ctrl "sigs.k8s.io/controller-runtime"
+        "sigs.k8s.io/controller-runtime/pkg/client"
+
+        "github.com/openmcp-project/usage-operator/internal/usage"
+)
+
+// ManagedControlPlaneReconciler reconciles a ManagedControlPlane object
+type ManagedControlPlaneReconciler struct {
+        client.Client
+        Scheme *runtime.Scheme
+
+        UsageTracker *usage.UsageTracker
+}
+
+// +kubebuilder:rbac:groups=core.openmcp.cloud,resources=managedcontrolplanes,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core.openmcp.cloud,resources=managedcontrolplanes/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=core.openmcp.cloud,resources=managedcontrolplanes/finalizers,verbs=update
+
+// Reconcile is part of the main kubernetes reconciliation loop which aims to
+// move the current state of the cluster closer to the desired state.
+// TODO(user): Modify the Reconcile function to compare the state specified by
+// the ManagedControlPlane object against the actual cluster state, and then
+// perform operations to make the cluster state reflect the state specified by
+// the user.
+//
+// For more details, check Reconcile and its Result here:
+// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.21.0/pkg/reconcile
+func (r *ManagedControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) <span class="cov0" title="0">{
+        log, err := logging.FromContext(ctx)
+        if err != nil </span><span class="cov0" title="0">{
+                return ctrl.Result{}, client.IgnoreNotFound(err)
+        }</span>
+
+        <span class="cov0" title="0">var mcp corev1alpha1.ManagedControlPlane
+        if err := r.Get(ctx, req.NamespacedName, &amp;mcp); err != nil </span><span class="cov0" title="0">{
+                log.Error(err, "unable to fetch mcp")
+
+                return ctrl.Result{}, client.IgnoreNotFound(err)
+        }</span>
+
+        <span class="cov0" title="0">re := regexp.MustCompile("project-(.+)--ws-(.+)")
+        namespace := mcp.Namespace
+        matches := re.FindStringSubmatch(namespace)
+        if len(matches) != 3 </span><span class="cov0" title="0">{
+                err := errors.New("namespace of mcp is invalid")
+                log.Error(err, "namespace of mcp is invalid")
+                return ctrl.Result{}, client.IgnoreNotFound(err)
+        }</span>
+        <span class="cov0" title="0">project := matches[1]
+        workspace := matches[2]
+
+        log.Info("mcp '" + mcp.Name + "' status '" + string(mcp.Status.Status) + "'")
+
+        if mcp.GetDeletionTimestamp() != nil || mcp.Status.Status == corev1alpha1.MCPStatusDeleting </span><span class="cov0" title="0">{
+                log.Info("mcp '" + mcp.Name + "' was deleted. Tracking it...")
+                err := r.UsageTracker.DeletionEvent(ctx, project, workspace, mcp.Name)
+                if err != nil </span><span class="cov0" title="0">{
+                        log.Error(err, "error when tracking deletion")
+                        return ctrl.Result{}, client.IgnoreNotFound(err)
+                }</span>
+                <span class="cov0" title="0">return ctrl.Result{}, nil</span>
+        }
+
+        <span class="cov0" title="0">err = r.UsageTracker.CreateOrIgnoreEvent(ctx, project, workspace, mcp.Name)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Error(err, "error when tracking create or ignore of mcp")
+                return ctrl.Result{}, client.IgnoreNotFound(err)
+        }</span>
+
+        // if mcp.Status.ObservedGeneration == 0 {
+        //         log.Info("mcp '" + mcp.Name + "' was created.")
+        //         return ctrl.Result{}, nil
+        // }
+
+        // if mcp.Status.ObservedGeneration != mcp.Generation {
+        //         log.Info("mcp '" + mcp.Name + "' was updated.")
+        //         return ctrl.Result{}, nil
+        // }
+
+        // log.Info("mcp '" + mcp.Name + "' got just a status update.")
+
+        <span class="cov0" title="0">return ctrl.Result{}, nil</span>
+}
+
+// SetupWithManager sets up the controller with the Manager.
+func (r *ManagedControlPlaneReconciler) SetupWithManager(mgr ctrl.Manager) error <span class="cov0" title="0">{
+        return ctrl.NewControllerManagedBy(mgr).
+                For(&amp;corev1alpha1.ManagedControlPlane{}).
+                Named("managedcontrolplane").
+                Complete(r)
+}</span>
+</pre>
+		
+		<pre class="file" id="file9" style="display: none">package helper
+
+import (
+        "context"
+        "fmt"
+
+        "k8s.io/apimachinery/pkg/api/errors"
+        k8s "sigs.k8s.io/controller-runtime/pkg/client"
+
+        mcpcorev1alpha1 "github.com/openmcp-project/mcp-operator/api/core/v1alpha1"
+        pwcorev1alpha1 "github.com/openmcp-project/project-workspace-operator/api/core/v1alpha1"
+)
+
+const labelChargingTarget = "openmcp.cloud.sap/charging-target"
+
+func ResolveChargingTarget(ctx context.Context, client k8s.Client, projectName string, workspaceName string, mcpName string) (string, error) <span class="cov0" title="0">{
+        var project pwcorev1alpha1.Project
+        var workspace pwcorev1alpha1.Workspace
+        var mcp mcpcorev1alpha1.ManagedControlPlane
+
+        err := client.Get(ctx, k8s.ObjectKey{
+                Name: projectName,
+        }, &amp;project)
+        if errors.IsNotFound(err) </span><span class="cov0" title="0">{
+                return "", fmt.Errorf("cant find project %v: %w", projectName, err)
+        }</span> else<span class="cov0" title="0"> if err != nil </span><span class="cov0" title="0">{
+                return "", fmt.Errorf("error when getting project %v: %w", projectName, err)
+        }</span>
+
+        <span class="cov0" title="0">err = client.Get(ctx, k8s.ObjectKey{
+                Name:      workspaceName,
+                Namespace: fmt.Sprintf("project-%s", projectName),
+        }, &amp;workspace)
+        if errors.IsNotFound(err) </span><span class="cov0" title="0">{
+                return "", fmt.Errorf("cant find workspace %v: %w", workspaceName, err)
+        }</span> else<span class="cov0" title="0"> if err != nil </span><span class="cov0" title="0">{
+                return "", fmt.Errorf("error when getting workspace %v: %w", workspaceName, err)
+        }</span>
+
+        <span class="cov0" title="0">err = client.Get(ctx, k8s.ObjectKey{
+                Name:      mcpName,
+                Namespace: fmt.Sprintf("project-%s--ws-%s", projectName, workspaceName),
+        }, &amp;mcp)
+        if errors.IsNotFound(err) </span><span class="cov0" title="0">{
+                return "", fmt.Errorf("cant find mcp %v: %w", mcpName, err)
+        }</span> else<span class="cov0" title="0"> if err != nil </span><span class="cov0" title="0">{
+                return "", fmt.Errorf("error when getting mcp %v: %w", mcpName, err)
+        }</span>
+
+        <span class="cov0" title="0">foundOne := false
+        chargingTarget, ok := project.GetLabels()[labelChargingTarget]
+        if ok </span><span class="cov0" title="0">{
+                foundOne = true
+        }</span>
+
+        <span class="cov0" title="0">wsChargingTarget, ok := workspace.GetLabels()[labelChargingTarget]
+        if ok </span><span class="cov0" title="0">{
+                foundOne = true
+                chargingTarget = wsChargingTarget
+        }</span>
+
+        <span class="cov0" title="0">mcpChargingTarget, ok := mcp.GetLabels()[labelChargingTarget]
+        if ok </span><span class="cov0" title="0">{
+                foundOne = true
+                chargingTarget = mcpChargingTarget
+        }</span>
+
+        <span class="cov0" title="0">if !foundOne </span><span class="cov0" title="0">{
+                return "", fmt.Errorf("can't find any charging target for project(%s) workspace(%s) mcp(%s)", projectName, workspaceName, mcpName)
+        }</span>
+
+        <span class="cov0" title="0">return chargingTarget, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file10" style="display: none">package runnable
+
+import (
+        "context"
+        "time"
+
+        "sigs.k8s.io/controller-runtime/pkg/client"
+
+        "github.com/openmcp-project/usage-operator/internal/usage"
+)
+
+const interval = 60 * time.Minute
+
+type UsageRunnable struct {
+        client       client.Client
+        usageTracker *usage.UsageTracker
+}
+
+func NewUsageRunnable(client client.Client, usageTracker *usage.UsageTracker) UsageRunnable <span class="cov0" title="0">{
+        return UsageRunnable{
+                client:       client,
+                usageTracker: usageTracker,
+        }
+}</span>
+
+func (u *UsageRunnable) NeedLeaderElection() bool <span class="cov0" title="0">{
+        return true
+}</span>
+
+func (u *UsageRunnable) Start(ctx context.Context) error <span class="cov0" title="0">{
+        err := u.loop(ctx)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov0" title="0">ch := time.Tick(interval)
+        for </span><span class="cov0" title="0">{
+                select </span>{
+                case &lt;-ctx.Done():<span class="cov0" title="0">
+                        return nil</span>
+                case &lt;-ch:<span class="cov0" title="0">
+                        err := u.loop(ctx)
+                        if err != nil </span><span class="cov0" title="0">{
+                                return err
+                        }</span>
+                }
+        }
+}
+
+func (u *UsageRunnable) loop(ctx context.Context) error <span class="cov0" title="0">{
+        err := u.usageTracker.ScheduledEvent(ctx)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov0" title="0">err = u.usageTracker.WriteToResource(ctx, u.client)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov0" title="0">return nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file11" style="display: none">package usage
+
+import (
+        "context"
+        "database/sql"
+        "errors"
+        "fmt"
+        "os"
+        "time"
+
+        _ "github.com/marcboeker/go-duckdb"
+        "github.com/openmcp-project/controller-utils/pkg/logging"
+        "sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+func GetDB() (*sql.DB, error) <span class="cov8" title="1">{
+        dbPath := os.Getenv("USAGE_DB_PATH")
+        if dbPath == "" </span><span class="cov8" title="1">{
+                fmt.Println("No DB path specified using env var USAGE_DB_PATH. Using in memory database instead.")
+        }</span>
+
+        <span class="cov8" title="1">db, err := sql.Open("duckdb", dbPath+"?access_mode=READ_WRITE")
+
+        return db, err</span>
+}
+
+func InitDB(ctx context.Context, log *logging.Logger) error <span class="cov8" title="1">{
+        var funcErr error
+
+        db, err := GetDB()
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov8" title="1">defer func() </span><span class="cov8" title="1">{
+                if closeErr := db.Close(); closeErr != nil </span><span class="cov0" title="0">{
+                        // Use errors.Join to combine the close error with any existing error
+                        funcErr = errors.Join(funcErr, fmt.Errorf("error closing db: %w", closeErr))
+                }</span>
+        }()
+
+        <span class="cov8" title="1">mcpTableSql := `
+                CREATE TABLE IF NOT EXISTS mcp (
+                        project VARCHAR NOT NULL,
+                        workspace VARCHAR NOT NULL,
+                        mcp VARCHAR NOT NULL,
+                        last_usage_capture TIMESTAMP NOT NULL,
+                        deleted_at TIMESTAMP,
+                        PRIMARY KEY (project, workspace, mcp)
+                );`
+
+        log.Info("Creating table 'mcp' if it doesn't exist...")
+        _, err = db.ExecContext(ctx, mcpTableSql)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov8" title="1">hourlyUsageTableSQL := `
+        CREATE TABLE IF NOT EXISTS hourly_usage (
+            project VARCHAR NOT NULL,
+            workspace VARCHAR NOT NULL,
+            mcp VARCHAR NOT NULL,
+            timestamp TIMESTAMP NOT NULL,
+            minutes INTEGER NOT NULL,
+            PRIMARY KEY (project, workspace, mcp, timestamp)
+        );`
+
+        log.Info("Creating table 'hourly_usage' if it doesn't exist...")
+        _, err = db.ExecContext(ctx, hourlyUsageTableSQL)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov8" title="1">return funcErr</span>
+}
+
+type TrackingMCPEntry struct {
+        Project          string
+        Workspace        string
+        Name             string
+        LastUsageCapture time.Time
+        DeletedAt        sql.NullTime
+}
+
+type HourlyUsageEntry struct {
+        Project   string
+        Workspace string
+        Name      string
+        Timestamp time.Time
+        Minutes   int
+}
+
+func (h *HourlyUsageEntry) ResourceName() string <span class="cov8" title="1">{
+        return fmt.Sprintf("%v-%v-%v", h.Project, h.Workspace, h.Name)
+}</span>
+
+func (h *HourlyUsageEntry) ObjectKey() client.ObjectKey <span class="cov8" title="1">{
+        return client.ObjectKey{
+                Name: h.ResourceName(),
+        }
+}</span>
+</pre>
+		
+		<pre class="file" id="file12" style="display: none">package usage
+
+import "time"
+
+type usagePerDay struct {
+        date     time.Time
+        duration time.Duration
+}
+
+const DAY = 24 * time.Hour
+
+func calculateUsage(start time.Time, end time.Time) (result []usagePerDay) <span class="cov8" title="1">{
+        start = start.UTC()
+        end = end.UTC()
+        duration := start.Sub(end).Abs()
+        return _calculateUsage(start, end, duration)
+}</span>
+
+// recursive function which calculates the usage per day in the time between current and end. Should not be used
+// directly, only through the calculateUsage method.
+func _calculateUsage(current time.Time, end time.Time, duration time.Duration) []usagePerDay <span class="cov8" title="1">{
+        currentDate := current.Truncate(DAY)
+        endDate := end.Truncate(DAY)
+        if currentDate.Equal(endDate) </span><span class="cov8" title="1">{
+                // its the same day, so we need to put the remaining duration onto the current day
+                return []usagePerDay{{
+                        date:     current,
+                        duration: duration,
+                }}
+
+        }</span>
+
+        <span class="cov8" title="1">if end.Before(current) </span><span class="cov8" title="1">{ // if end is smaller then start, we reverse it
+                return _calculateUsage(end, current, duration)
+        }</span>
+
+        <span class="cov8" title="1">usageForTheDay := DAY - (time.Duration(current.Hour()) * time.Hour)
+        nextDay := currentDate.Add(DAY)
+
+        return append(_calculateUsage(nextDay, end, duration-usageForTheDay),
+                usagePerDay{
+                        date:     current,
+                        duration: usageForTheDay,
+                },
+        )</span>
+}
+</pre>
+		
+		<pre class="file" id="file13" style="display: none">package usage
+
+import (
+        "context"
+        "database/sql"
+        "errors"
+        "math"
+        "sync"
+        "time"
+
+        "fmt"
+
+        k8serrors "k8s.io/apimachinery/pkg/api/errors"
+        "sigs.k8s.io/controller-runtime/pkg/client"
+        "sigs.k8s.io/controller-runtime/pkg/log"
+
+        "github.com/openmcp-project/controller-utils/pkg/logging"
+
+        v1 "github.com/openmcp-project/usage-operator/api/usage/v1"
+        "github.com/openmcp-project/usage-operator/internal/helper"
+)
+
+type UsageTracker struct {
+        db   *sql.DB
+        lock sync.RWMutex
+
+        log *logging.Logger
+}
+
+func NewUsageTracker(log *logging.Logger) (*UsageTracker, error) <span class="cov0" title="0">{
+        db, err := GetDB()
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">return &amp;UsageTracker{
+                db:  db,
+                log: log,
+        }, nil</span>
+
+}
+
+func (u *UsageTracker) Close() error <span class="cov0" title="0">{
+        return u.db.Close()
+}</span>
+
+// This method
+// creates a tracking entry in the DB, if it not already exists
+// updated a tracking entry in the DB, if it is there, but has a deleted_at entry
+// does nothing to the DB, if it is already there
+func (u *UsageTracker) CreateOrIgnoreEvent(ctx context.Context, project string, workspace string, mcp_name string) error <span class="cov0" title="0">{
+        _ = log.FromContext(ctx)
+
+        trackingEntry, err := u.getTrackingEntry(ctx, project, workspace, mcp_name)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov0" title="0">if trackingEntry == nil </span><span class="cov0" title="0">{
+                // Not found an already existing entry
+                return u.CreationEvent(ctx, project, workspace, mcp_name)
+        }</span>
+
+        <span class="cov0" title="0">if !trackingEntry.DeletedAt.Valid </span><span class="cov0" title="0">{
+                u.lock.Lock()
+                defer u.lock.Unlock()
+
+                // Update entry in DB
+                sql := "UPDATE mcp SET deleted_at = NULL WHERE project = ? AND workspace = ? AND mcp = ?"
+                _, err := u.db.ExecContext(ctx, sql, project, workspace, mcp_name)
+                return err
+        }</span>
+
+        <span class="cov0" title="0">return nil</span>
+}
+
+func (u *UsageTracker) getTrackingEntry(ctx context.Context, project string, workspace string, mcp_name string) (*TrackingMCPEntry, error) <span class="cov0" title="0">{
+        u.lock.RLock()
+        var trackingEntry TrackingMCPEntry
+        query := "SELECT project, workspace, mcp, last_usage_capture, deleted_at FROM mcp WHERE project = ? AND workspace = ? AND mcp = ?"
+        row := u.db.QueryRowContext(ctx, query, project, workspace, mcp_name)
+        u.lock.RUnlock()
+
+        err := row.Scan(&amp;trackingEntry.Project, &amp;trackingEntry.Workspace, &amp;trackingEntry.Name, &amp;trackingEntry.LastUsageCapture, &amp;trackingEntry.DeletedAt)
+        if err == sql.ErrNoRows </span><span class="cov0" title="0">{
+                return nil, nil
+        }</span>
+        <span class="cov0" title="0">if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">return &amp;trackingEntry, err</span>
+}
+
+func (u *UsageTracker) CreationEvent(ctx context.Context, project string, workspace string, mcp_name string) error <span class="cov0" title="0">{
+        u.lock.Lock()
+
+        creation_timestamp := time.Now().UTC()
+        sql := "INSERT INTO mcp (project, workspace, mcp, last_usage_capture) VALUES (?, ?, ?, ?)"
+        _, err := u.db.ExecContext(ctx, sql, project, workspace, mcp_name, creation_timestamp)
+        u.lock.Unlock()
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov0" title="0">return nil</span>
+}
+
+func (u *UsageTracker) DeletionEvent(ctx context.Context, project string, workspace string, mcp_name string) error <span class="cov0" title="0">{
+        u.lock.RLock()
+
+        deletion_timestamp := time.Now().UTC()
+
+        var last_usage_capture time.Time
+        query := "SELECT last_usage_capture FROM mcp WHERE project = ? AND workspace = ? AND mcp = ?"
+        row := u.db.QueryRowContext(ctx, query, project, workspace, mcp_name)
+
+        u.lock.RUnlock()
+
+        err := row.Scan(&amp;last_usage_capture)
+        if err == sql.ErrNoRows </span><span class="cov0" title="0">{
+                return nil
+        }</span>
+        <span class="cov0" title="0">if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov0" title="0">u.lock.Lock()
+        query = "DELETE FROM mcp WHERE project = ? AND workspace = ? AND mcp = ?"
+        _, err = u.db.ExecContext(ctx, query, project, workspace, mcp_name)
+        u.lock.Unlock()
+
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        // Calculate usage until deletion
+        <span class="cov0" title="0">usage := deletion_timestamp.Sub(last_usage_capture).Abs()
+
+        u.lock.Lock()
+        defer u.lock.Unlock()
+        err = u.trackUsage(ctx, project, workspace, mcp_name, time.Now().UTC(), usage)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov0" title="0">return nil</span>
+}
+
+func (u *UsageTracker) ScheduledEvent(ctx context.Context) error <span class="cov0" title="0">{
+        log := u.log.WithName("scheduled")
+
+        hourStart := time.Now().UTC().Truncate(time.Hour)
+
+        log.Info("tracking hourly usage for mcps " + hourStart.Format(time.DateTime))
+
+        u.lock.RLock()
+        query := "SELECT project, workspace, mcp, last_usage_capture, deleted_at FROM mcp"
+        rows, err := u.db.QueryContext(ctx, query)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov0" title="0">u.lock.RUnlock()
+        log.Debug("done getting data from db")
+
+        u.lock.Lock()
+        defer u.lock.Unlock()
+        log.Debug("start looping through results")
+        for rows.Next() </span><span class="cov0" title="0">{
+                var trackingEntry TrackingMCPEntry
+                err = rows.Scan(
+                        &amp;trackingEntry.Project,
+                        &amp;trackingEntry.Workspace,
+                        &amp;trackingEntry.Name,
+                        &amp;trackingEntry.LastUsageCapture,
+                        &amp;trackingEntry.DeletedAt,
+                )
+                log.Debug(fmt.Sprintf("entry: %v:%v:%v", trackingEntry.Project, trackingEntry.Workspace, trackingEntry.Name))
+                if err != nil </span><span class="cov0" title="0">{
+                        return err
+                }</span>
+
+                <span class="cov0" title="0">if trackingEntry.DeletedAt.Valid </span><span class="cov0" title="0">{
+                        continue</span>
+                }
+
+                <span class="cov0" title="0">if hourStart.Compare(trackingEntry.LastUsageCapture) == -1 </span><span class="cov0" title="0">{
+                        // BillingCycleStart is in future, so no need for calculating it.
+                        continue</span>
+                }
+
+                <span class="cov0" title="0">query := "UPDATE mcp SET last_usage_capture = ? WHERE project = ? AND workspace = ? AND mcp = ?"
+                _, err := u.db.ExecContext(ctx, query, hourStart, trackingEntry.Project, trackingEntry.Workspace, trackingEntry.Name)
+                if err != nil </span><span class="cov0" title="0">{
+                        return err
+                }</span>
+
+                <span class="cov0" title="0">usagePerDay := calculateUsage(trackingEntry.LastUsageCapture, hourStart)
+                log.Debug("Usage hours by day", "start", trackingEntry.LastUsageCapture, "end", hourStart)
+                for _, usage := range usagePerDay </span><span class="cov0" title="0">{
+                        log.Debug("  usage:", "date", usage.date, "duration", usage.duration)
+                }</span>
+
+                <span class="cov0" title="0">var errs error
+                for _, usage := range usagePerDay </span><span class="cov0" title="0">{
+                        err = u.trackUsage(ctx, trackingEntry.Project, trackingEntry.Workspace, trackingEntry.Name, usage.date, usage.duration)
+                        if err != nil </span><span class="cov0" title="0">{
+                                errs = errors.Join(errs, err)
+                        }</span>
+                }
+                <span class="cov0" title="0">if errs != nil </span><span class="cov0" title="0">{
+                        return errs
+                }</span>
+
+        }
+
+        <span class="cov0" title="0">log.Info("done tracking hourly usage " + hourStart.Format(time.DateTime))
+
+        return nil</span>
+}
+
+func (u *UsageTracker) trackUsage(ctx context.Context, project string, workspace string, mcp_name string, timestamp time.Time, duration time.Duration) error <span class="cov0" title="0">{
+        sql := "INSERT INTO hourly_usage (project, workspace, mcp, timestamp, minutes) VALUES (?, ?, ?, ?, ?) ON CONFLICT DO UPDATE SET minutes = EXCLUDED.minutes"
+        _, err := u.db.ExecContext(ctx, sql, project, workspace, mcp_name, timestamp, duration.Minutes(), duration.Minutes())
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov0" title="0">return nil</span>
+}
+
+func (u *UsageTracker) WriteToResource(ctx context.Context, client client.Client) error <span class="cov0" title="0">{
+        log := u.log.WithName("scheduled")
+
+        log.Info("writing usage into k8s resource")
+
+        u.lock.RLock()
+        query := `
+                SELECT
+                        project, workspace, mcp, CAST(timestamp AS DATE) AS usage_date, SUM(minutes) AS total_daily_minutes
+                FROM hourly_usage
+                GROUP BY
+                        project, workspace, mcp, usage_date
+                ORDER BY
+                        project, workspace, mcp, usage_date
+        `
+        rows, err := u.db.QueryContext(ctx, query)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov0" title="0">u.lock.RUnlock()
+
+        var errs error
+        for rows.Next() </span><span class="cov0" title="0">{
+                var hourlyUsage HourlyUsageEntry
+
+                err = rows.Scan(
+                        &amp;hourlyUsage.Project,
+                        &amp;hourlyUsage.Workspace,
+                        &amp;hourlyUsage.Name,
+                        &amp;hourlyUsage.Timestamp,
+                        &amp;hourlyUsage.Minutes,
+                )
+                if err != nil </span><span class="cov0" title="0">{
+                        errs = errors.Join(errs, fmt.Errorf("error when scanning hourly usage: %w", err))
+                        continue</span>
+                }
+
+                <span class="cov0" title="0">chargingTarget, err := helper.ResolveChargingTarget(ctx, client, hourlyUsage.Project, hourlyUsage.Workspace, hourlyUsage.Name)
+                if err != nil </span><span class="cov0" title="0">{
+                        log.Error(err, fmt.Sprintf("error when resolving charging target %v", hourlyUsage.ResourceName()))
+                        chargingTarget = "missing"
+                }</span>
+
+                <span class="cov0" title="0">duration, _ := time.ParseDuration(fmt.Sprint(hourlyUsage.Minutes) + "m")
+                hours := int(math.Ceil(duration.Hours()))
+
+                resourceExistsBefore := true
+
+                var mcpUsage v1.MCPUsage
+                err = client.Get(ctx, hourlyUsage.ObjectKey(), &amp;mcpUsage)
+                if k8serrors.IsNotFound(err) </span><span class="cov0" title="0">{
+                        resourceExistsBefore = false
+                }</span> else<span class="cov0" title="0"> if err != nil </span><span class="cov0" title="0">{
+                        errs = errors.Join(errs, fmt.Errorf("error at getting MCPUsage resource for %v: %w", hourlyUsage.ResourceName(), err))
+                        continue</span>
+                }
+
+                <span class="cov0" title="0">mcpUsage.Name = hourlyUsage.ResourceName()
+                usage, err := v1.NewDailyUsage(hourlyUsage.Timestamp, hours)
+                if err != nil </span><span class="cov0" title="0">{
+                        errs = errors.Join(errs, fmt.Errorf("unable to create DailyUsage entry for %v: %w", hourlyUsage.ResourceName(), err))
+                }</span>
+
+                <span class="cov0" title="0">if !resourceExistsBefore </span><span class="cov0" title="0">{
+                        err = client.Create(ctx, &amp;mcpUsage)
+                        if err != nil </span><span class="cov0" title="0">{
+                                errs = errors.Join(errs, fmt.Errorf("error at creating MCPUsage resource for %v: %w", hourlyUsage.ResourceName(), err))
+                                continue</span>
+                        }
+                }
+
+                <span class="cov0" title="0">mcpUsage.Status.ChargingTarget = chargingTarget
+
+                found := false
+                for idx := range mcpUsage.Status.Usage </span><span class="cov0" title="0">{
+                        if mcpUsage.Status.Usage[idx].Date.Equal(&amp;usage.Date) </span><span class="cov0" title="0">{
+                                mcpUsage.Status.Usage[idx].Usage = usage.Usage
+                                found = true
+                        }</span>
+                }
+                <span class="cov0" title="0">if !found </span><span class="cov0" title="0">{
+                        mcpUsage.Status.Usage = append(mcpUsage.Status.Usage, usage)
+                }</span>
+
+                <span class="cov0" title="0">err = client.Status().Update(ctx, &amp;mcpUsage)
+                if err != nil </span><span class="cov0" title="0">{
+                        errs = errors.Join(errs, fmt.Errorf("error at updating MCPUsage status resource for %v: %w", hourlyUsage.ResourceName(), err))
+                        continue</span>
+                }
+        }
+
+        <span class="cov0" title="0">return errs</span>
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>
