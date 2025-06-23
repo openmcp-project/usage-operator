@@ -10,6 +10,8 @@ type usagePerDay struct {
 const DAY = 24 * time.Hour
 
 func calculateUsage(start time.Time, end time.Time) (result []usagePerDay) {
+	start = start.UTC()
+	end = end.UTC()
 	duration := start.Sub(end).Abs()
 	return _calculateUsage(start, end, duration)
 }
