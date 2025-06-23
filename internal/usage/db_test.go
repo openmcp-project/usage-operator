@@ -13,7 +13,8 @@ import (
 
 var _ = Describe("Database Module", func() {
 	BeforeEach(func() {
-		os.Setenv("USAGE_DB_PATH", "")
+		err := os.Setenv("USAGE_DB_PATH", "")
+		Ω(err).Should(Succeed())
 	})
 	Context("When getting the Database", func() {
 		It("should return a database entity", func() {
@@ -43,7 +44,7 @@ var _ = Describe("Database Module", func() {
 				err = rows.Scan(&tableName)
 				Ω(err).Should(Succeed())
 
-				Ω(len(expectedTables)).ShouldNot(Equal(0))
+				Ω(len(expectedTables)).ShouldNot(BeEmpty())
 				expectedTables = slices.DeleteFunc(expectedTables, func(expected string) bool {
 					return expected == tableName
 				})
