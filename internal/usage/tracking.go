@@ -300,6 +300,9 @@ func (u *UsageTracker) WriteToResource(ctx context.Context, client client.Client
 			}
 		}
 
+		mcpUsage.Status.Workspace = hourlyUsage.Workspace
+		mcpUsage.Status.Project = hourlyUsage.Project
+		mcpUsage.Status.MCP = hourlyUsage.Name
 		mcpUsage.Status.ChargingTarget = chargingTarget
 
 		found := false
