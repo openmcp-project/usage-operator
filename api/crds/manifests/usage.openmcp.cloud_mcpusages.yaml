@@ -14,7 +14,7 @@ spec:
     listKind: MCPUsageList
     plural: mcpusages
     singular: mcpusage
-  scope: Cluster
+  scope: Namespaced
   versions:
   - name: v1
     schema:
@@ -62,7 +62,18 @@ spec:
                   - usage
                   type: object
                 type: array
+              last_usage_captured:
+                format: date-time
+                type: string
               mcp:
+                type: string
+              mcp_created_at:
+                format: date-time
+                type: string
+              mcp_deleted_at:
+                format: date-time
+                type: string
+              message:
                 type: string
               project:
                 type: string

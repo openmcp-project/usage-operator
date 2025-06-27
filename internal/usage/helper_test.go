@@ -23,10 +23,10 @@ var _ = Describe("Helper Module", func() {
 
 			Ω(result).Should(HaveLen(8))
 
-			Ω(result[0].date.Equal(endDate)).Should(BeTrue(), "first date must equal end date")
-			Ω(result[0].duration).Should(Equal(firstDayDuration), "first day must have the right duration")
+			Ω(result[0].Date.Time.Equal(endDate)).Should(BeTrue(), "first date must equal end date")
+			Ω(result[0].Usage.Duration).Should(Equal(firstDayDuration), "first day must have the right duration")
 			for _, usage := range result[1:] {
-				Ω(usage.duration).Should(Equal(24 * time.Hour))
+				Ω(usage.Usage.Duration).Should(Equal(24 * time.Hour))
 			}
 
 			reversed := calculateUsage(end, start)

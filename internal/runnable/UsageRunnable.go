@@ -53,10 +53,5 @@ func (u *UsageRunnable) loop(ctx context.Context) error {
 		return err
 	}
 
-	err = u.usageTracker.WriteToResource(ctx, u.client)
-	if err != nil {
-		return err
-	}
-
 	return nil
 }

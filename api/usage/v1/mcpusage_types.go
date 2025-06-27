@@ -38,6 +38,12 @@ type MCPUsageStatus struct {
 	Workspace      string       `json:"workspace"`
 	MCP            string       `json:"mcp"`
 	Usage          []DailyUsage `json:"daily_usage"`
+
+	LastUsageCaptured metav1.Time `json:"last_usage_captured,omitempty"`
+	MCPCreatedAt      metav1.Time `json:"mcp_created_at,omitempty"`
+	MCPDeletedAt      metav1.Time `json:"mcp_deleted_at,omitempty"`
+
+	Message string `json:"message,omitempty"`
 }
 
 type DailyUsage struct {
@@ -61,7 +67,6 @@ func NewDailyUsage(date time.Time, hours int) (DailyUsage, error) {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Cluster
 // +kubebuilder:metadata:labels="openmcp.cloud/cluster=onboarding"
 
 // MCPUsage is the Schema for the mcpdailies API.

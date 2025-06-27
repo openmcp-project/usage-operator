@@ -268,21 +268,10 @@ func (o *RunOptions) Run(ctx context.Context) error {
 		return fmt.Errorf("unable to create manager: %w", err)
 	}
 
-	err = usage.InitDB(context.Background(), &setupLog)
-	if err != nil {
-		return fmt.Errorf("unable to initialize DB: %w", err)
-	}
-
-	usageTracker, err := usage.NewUsageTracker(&o.Log)
+	usageTracker, err := usage.NewUsageTracker(&o.Log, mgr.GetClient())
 	if err != nil {
 		return fmt.Errorf("unable to create usage tracker: %w", err)
 	}
-	defer func() {
-		err := usageTracker.Close()
-		if err != nil {
-			setupLog.Error(err, "unable to close usage tracker")
-		}
-	}()
 
 	runnable := runnable.NewUsageRunnable(mgr.GetClient(), usageTracker)
 	if err := mgr.Add(&runnable); err != nil {

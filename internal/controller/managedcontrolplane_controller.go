@@ -87,7 +87,7 @@ func (r *ManagedControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.
 		return ctrl.Result{}, nil
 	}
 
-	err = r.UsageTracker.CreateOrIgnoreEvent(ctx, project, workspace, mcp.Name)
+	err = r.UsageTracker.CreateOrUpdateEvent(ctx, project, workspace, mcp.Name)
 	if err != nil {
 		log.Error(err, "error when tracking create or ignore of mcp")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
