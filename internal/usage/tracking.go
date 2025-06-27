@@ -137,7 +137,7 @@ func (u *UsageTracker) DeletionEvent(ctx context.Context, project string, worksp
 	_ = u.initLogger("deletion", project, workspace, mcp_name)
 
 	objectKey := GetObjectKey(project, workspace, mcp_name)
-	var mcpUsage v1.MCPUsage = v1.MCPUsage{
+	var mcpUsage = v1.MCPUsage{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      objectKey.Name,
 			Namespace: objectKey.Namespace,

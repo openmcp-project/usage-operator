@@ -81,7 +81,7 @@ func MergeDailyUsages(a []v1.DailyUsage, b []v1.DailyUsage) []v1.DailyUsage {
 		addUsageToMap(daily)
 	}
 
-	var mergedList []v1.DailyUsage
+	var mergedList []v1.DailyUsage = make([]v1.DailyUsage, len(aggregatedUsage))
 	for dateStr, totalUsage := range aggregatedUsage {
 		t, err := time.Parse("2006-01-02", dateStr)
 		if err != nil {
