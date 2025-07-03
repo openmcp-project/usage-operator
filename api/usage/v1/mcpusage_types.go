@@ -27,23 +27,23 @@ import (
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // MCPUsageSpec defines the desired state of MCPUsage.
-type MCPUsageSpec struct{}
+type MCPUsageSpec struct {
+	ChargingTarget    string       `json:"charging_target"`
+	Project           string       `json:"project"`
+	Workspace         string       `json:"workspace"`
+	MCP               string       `json:"mcp"`
+	Usage             []DailyUsage `json:"daily_usage"`
+	LastUsageCaptured metav1.Time  `json:"last_usage_captured,omitempty"`
+	MCPCreatedAt      metav1.Time  `json:"mcp_created_at,omitempty"`
+	MCPDeletedAt      metav1.Time  `json:"mcp_deleted_at,omitempty"`
+
+	Message string `json:"message,omitempty"`
+}
 
 // MCPUsageStatus defines the observed state of MCPUsage.
 type MCPUsageStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	ChargingTarget string       `json:"charging_target"`
-	Project        string       `json:"project"`
-	Workspace      string       `json:"workspace"`
-	MCP            string       `json:"mcp"`
-	Usage          []DailyUsage `json:"daily_usage"`
-
-	LastUsageCaptured metav1.Time `json:"last_usage_captured,omitempty"`
-	MCPCreatedAt      metav1.Time `json:"mcp_created_at,omitempty"`
-	MCPDeletedAt      metav1.Time `json:"mcp_deleted_at,omitempty"`
-
-	Message string `json:"message,omitempty"`
 }
 
 type DailyUsage struct {
