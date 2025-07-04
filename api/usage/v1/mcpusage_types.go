@@ -44,6 +44,13 @@ type MCPUsageSpec struct {
 type MCPUsageStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+	DailyUsageReport []DailyUsageReport `json:"daily_usage_report"`
+}
+
+type DailyUsageReport struct {
+	Date    metav1.Time `json:"date"`
+	Status  string      `json:"status,omitempty"`
+	Message string      `json:"message,omitempty"`
 }
 
 type DailyUsage struct {
