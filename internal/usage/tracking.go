@@ -183,8 +183,41 @@ func (u *UsageTracker) ScheduledEvent(ctx context.Context) error {
 		errs = errors.Join(errs, err)
 	}
 
+	if errs != nil {
+		return fmt.Errorf("error when updating the usage: %w", errs)
+	}
+
+	return nil
+}
+
+func (u *UsageTracker) GarbageCollection(ctx context.Context) error {
+	_ = u.log.WithName("scheduled")
+
+	var mcpUsages v1.MCPUsageList
+	err := u.client.List(ctx, &mcpUsages)
 	if err != nil {
-		return fmt.Errorf("error when updating the usage: %w", err)
+		return fmt.Errorf("error when getting list of mcp usages: %w", err)
+	}
+
+	now := time.Now().UTC().Truncate(time.Hour * 24)
+	oneMonth := time.Hour * 24 * 32
+	latestTimestamp := now.Add(-oneMonth)
+
+	var errs error
+	for _, mcpUsage := range mcpUsages.Items {
+		usagesToKeep := make([]v1.DailyUsage, 0, len(mcpUsage.Spec.Usage))
+		for _, usage := range mcpUsage.Spec.Usage {
+			if !usage.Date.Time.Before(latestTimestamp) {
+				usagesToKeep = append(usagesToKeep, usage)
+			}
+		}
+		mcpUsage.Spec.Usage = usagesToKeep
+		err = u.client.Update(ctx, &mcpUsage)
+		errs = errors.Join(errs, err)
+	}
+
+	if errs != nil {
+		return fmt.Errorf("error when updating the usage: %w", errs)
 	}
 
 	return nil

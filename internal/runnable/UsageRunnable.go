@@ -2,6 +2,8 @@ package runnable
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -47,11 +49,17 @@ func (u *UsageRunnable) Start(ctx context.Context) error {
 	}
 }
 
-func (u *UsageRunnable) loop(ctx context.Context) error {
+func (u *UsageRunnable) loop(ctx context.Context) (errs error) {
+
 	err := u.usageTracker.ScheduledEvent(ctx)
 	if err != nil {
-		return err
+		errs = errors.Join(errs, fmt.Errorf("error in scheduled event: %w", err))
 	}
 
-	return nil
+	err = u.usageTracker.GarbageCollection(ctx)
+	if err != nil {
+		errs = errors.Join(errs, fmt.Errorf("error in garbage collection: %w", err))
+	}
+
+	return
 }
