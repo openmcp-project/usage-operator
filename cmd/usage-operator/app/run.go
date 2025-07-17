@@ -239,6 +239,7 @@ func (o *RunOptions) PrintCompletedOptions(cmd *cobra.Command) {
 
 func (o *RunOptions) Run(ctx context.Context) error {
 	setupLog = o.Log.WithName("setup")
+	setupLog.Info("Environment", "value", o.Environment)
 
 	webhookServer := webhook.NewServer(webhook.Options{
 		TLSOpts: o.WebhookTLSOpts,

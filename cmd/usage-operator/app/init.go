@@ -58,6 +58,7 @@ func (o *InitOptions) Complete(ctx context.Context) error {
 
 func (o *InitOptions) Run(ctx context.Context) error {
 	log := o.Log.WithName("main")
+	log.Info("Environment", "value", o.Environment)
 
 	// apply CRDs
 	crdManager := crdutil.NewCRDManager(apiconst.ClusterLabel, crds.CRDs)

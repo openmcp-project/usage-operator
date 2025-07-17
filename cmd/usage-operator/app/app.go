@@ -33,7 +33,8 @@ func NewUsageOperatorCommand(ctx context.Context) *cobra.Command {
 }
 
 type RawSharedOptions struct {
-	DryRun bool `json:"dry-run"`
+	Environment string `json:"environment"`
+	DryRun      bool   `json:"dry-run"`
 }
 
 type SharedOptions struct {
@@ -48,6 +49,7 @@ func (o *SharedOptions) AddPersistentFlags(cmd *cobra.Command) {
 	logging.InitFlags(cmd.PersistentFlags())
 	// misc
 	cmd.PersistentFlags().BoolVar(&o.DryRun, "dry-run", false, "If set, the command aborts after evaluation of the given flags.")
+	cmd.PersistentFlags().StringVar(&o.Environment, "environment", "", "Environment name. Required. This is used to distinguish between different environments that are watching the same Onboarding cluster. Must be globally unique.")
 }
 
 func (o *SharedOptions) Complete() error {
