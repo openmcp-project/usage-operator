@@ -104,6 +104,8 @@ github.com/openmcp-project/mcp-operator/api v0.30.0 h1:DqnoapCqzhgs/ypDsuSf01ltt
 github.com/openmcp-project/mcp-operator/api v0.30.0/go.mod h1:E7EPXYrmY4IpYtl6UGkppD7s5UZ6cKFZwN4ncIme7TY=
 github.com/openmcp-project/openmcp-operator/api v0.8.3 h1:s1c9kwvHUAkHZfSybb83Biw8qyia9pF4r2zxbfSM3qI=
 github.com/openmcp-project/openmcp-operator/api v0.8.3/go.mod h1:AflvCe/S41tO3x2rq4p+JnWxqVNtuwMn4LDPEVE00LE=
+github.com/openmcp-project/openmcp-operator/lib v0.8.3 h1:2bb1zbP6Si7/fUfXT9M5B0xQnd7O4zGJXaUoe9pDmcA=
+github.com/openmcp-project/openmcp-operator/lib v0.8.3/go.mod h1:oydIXRZoNDxtI4DI/JBUB08UPzvfdaKLqHvC4S4HXHQ=
 github.com/openmcp-project/project-workspace-operator/api v0.13.1 h1:Qq0110MdydwBHug5YFcRtHiN2Wtt9qJ5PYMvns/FiVY=
 github.com/openmcp-project/project-workspace-operator/api v0.13.1/go.mod h1:XFBFDMYCNFCNV5LQQs1FdStJ03ztrC5Exazbt9lZkvk=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=

@@ -5,14 +5,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/openmcp-project/controller-utils/pkg/clusters"
 	"github.com/openmcp-project/controller-utils/pkg/resources"
 	"github.com/openmcp-project/openmcp-operator/api/install"
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/runtime"
-	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/openmcp-project/usage-operator/api/crds"
+	"github.com/openmcp-project/usage-operator/internal/helper"
 )
 
 func NewUninstallCommand(so *SharedOptions) *cobra.Command {
@@ -63,8 +62,10 @@ func (o *UninstallOptions) Run(ctx context.Context) error {
 		return fmt.Errorf("error when getting crds: %w", err)
 	}
 
-	var cluster clusters.Cluster
-	cluster.WithRESTConfig(ctrl.GetConfigOrDie())
+	cluster, err := helper.GetOnboardingCluster(ctx, log, o.PlatformCluster.Client())
+	if err != nil {
+		return fmt.Errorf("error when getting onboarding cluster: %w", err)
+	}
 
 	if err := cluster.InitializeClient(install.InstallCRDAPIs(runtime.NewScheme())); err != nil {
 		return fmt.Errorf("error initializing client: %w", err)

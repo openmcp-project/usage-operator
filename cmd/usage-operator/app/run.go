@@ -25,6 +25,7 @@ import (
 	usagev1 "github.com/openmcp-project/usage-operator/api/usage/v1"
 
 	"github.com/openmcp-project/usage-operator/internal/controller"
+	"github.com/openmcp-project/usage-operator/internal/helper"
 	"github.com/openmcp-project/usage-operator/internal/runnable"
 	"github.com/openmcp-project/usage-operator/internal/usage"
 )
@@ -241,11 +242,16 @@ func (o *RunOptions) Run(ctx context.Context) error {
 	setupLog = o.Log.WithName("setup")
 	setupLog.Info("Environment", "value", o.Environment)
 
+	cluster, err := helper.GetOnboardingCluster(ctx, setupLog, o.PlatformCluster.Client())
+	if err != nil {
+		return fmt.Errorf("error when getting onboarding cluster: %w", err)
+	}
+
 	webhookServer := webhook.NewServer(webhook.Options{
 		TLSOpts: o.WebhookTLSOpts,
 	})
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+	mgr, err := ctrl.NewManager(cluster.RESTConfig(), ctrl.Options{
 		Scheme:                 scheme,
 		Metrics:                o.MetricsServerOptions,
 		WebhookServer:          webhookServer,
