@@ -15,19 +15,21 @@ import (
 	"github.com/openmcp-project/openmcp-operator/lib/clusteraccess"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
-	"github.com/openmcp-project/usage-operator/api"
-	usagev1 "github.com/openmcp-project/usage-operator/api/usage/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 
+	"github.com/openmcp-project/usage-operator/api"
+
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
 func GetOnboardingCluster(ctx context.Context, log logging.Logger, client client.Client) (*clusters.Cluster, error) {
 	onboardingScheme := runtime.NewScheme()
 	utilruntime.Must(clientgoscheme.AddToScheme(onboardingScheme))
-	utilruntime.Must(usagev1.AddToScheme(onboardingScheme))
 	utilruntime.Must(clustersv1alpha1.AddToScheme(onboardingScheme))
+	// Add CRD type to scheme
+	utilruntime.Must(apiextensionsv1.AddToScheme(onboardingScheme))
 
 	providerSystemNamespace := os.Getenv(openmcpconstv1alpha1.EnvVariablePlatformClusterNamespace)
 	if providerSystemNamespace == "" {
@@ -53,7 +55,7 @@ func GetOnboardingCluster(ctx context.Context, log logging.Logger, client client
 					{
 						APIGroups: []string{"apiextensions.k8s.io"},
 						Resources: []string{"customresourcedefinitions"},
-						Verbs:     []string{"create", "delete"},
+						Verbs:     []string{"create", "update", "delete"},
 					},
 					{
 						APIGroups: []string{"usage.openmcp.cloud"},
