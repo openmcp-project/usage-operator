@@ -74,7 +74,11 @@ func NewDailyUsage(date time.Time, hours int) (DailyUsage, error) {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:resource:scope=Cluster,shortName=mcpu
 // +kubebuilder:metadata:labels="openmcp.cloud/cluster=onboarding"
+// +kubebuilder:printcolumn:name="Project",type=string,JSONPath=`.spec.project`
+// +kubebuilder:printcolumn:name="Workspace",type=string,JSONPath=`.spec.workspace`
+// +kubebuilder:printcolumn:name="MCP",type=string,JSONPath=`.spec.mcp`
 
 // MCPUsage is the Schema for the mcpdailies API.
 type MCPUsage struct {

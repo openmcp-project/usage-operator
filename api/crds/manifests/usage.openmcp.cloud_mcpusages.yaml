@@ -13,10 +13,22 @@ spec:
     kind: MCPUsage
     listKind: MCPUsageList
     plural: mcpusages
+    shortNames:
+    - mcpu
     singular: mcpusage
-  scope: Namespaced
+  scope: Cluster
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - jsonPath: .spec.project
+      name: Project
+      type: string
+    - jsonPath: .spec.workspace
+      name: Workspace
+      type: string
+    - jsonPath: .spec.mcp
+      name: MCP
+      type: string
+    name: v1
     schema:
       openAPIV3Schema:
         description: MCPUsage is the Schema for the mcpdailies API.

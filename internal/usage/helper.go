@@ -1,11 +1,14 @@
 package usage
 
 import (
+	"errors"
 	"sort"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/google/uuid"
 
 	v1 "github.com/openmcp-project/usage-operator/api/usage/v1"
 )
@@ -52,11 +55,17 @@ func GetNamespacedName(project, workspace string) string {
 	return "project-" + project + "--ws-" + workspace
 }
 
-func GetObjectKey(project, workspace, mcp string) client.ObjectKey {
-	return client.ObjectKey{
-		Name:      mcp,
-		Namespace: GetNamespacedName(project, workspace),
+func GetObjectKey(project, workspace, mcp string) (client.ObjectKey, error) {
+	name := GetNamespacedName(project, workspace) + "-" + mcp
+	id := uuid.NewSHA1(uuid.Nil, []byte(name))
+
+	if id.String() == "" {
+		return client.ObjectKey{}, errors.New("can't generate uuid from input")
 	}
+
+	return client.ObjectKey{
+		Name: id.String(),
+	}, nil
 }
 
 // merges two DailyUsages where no Date is double

@@ -9,6 +9,7 @@ import (
 
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/openmcp-project/controller-utils/pkg/logging"
@@ -41,60 +42,74 @@ func (u *UsageTracker) initLogger(name, project, workspace, mcp_name string) log
 func (u *UsageTracker) CreateOrUpdateEvent(ctx context.Context, project string, workspace string, mcp_name string) error {
 	log := u.initLogger("creation-update", project, workspace, mcp_name)
 
-	objectKey := GetObjectKey(project, workspace, mcp_name)
-
-	var mcpUsage v1.MCPUsage
-	err := u.client.Get(ctx, objectKey, &mcpUsage)
-	if err != nil && !k8serrors.IsNotFound(err) {
-		return fmt.Errorf("error at getting MCPUsage resource for %v: %w", mcp_name, err)
+	objectKey, err := GetObjectKey(project, workspace, mcp_name)
+	if err != nil {
+		return fmt.Errorf("error getting object key: %w", err)
 	}
 
-	mcpUsage.Name = objectKey.Name
-	mcpUsage.Namespace = objectKey.Namespace
-
-	if k8serrors.IsNotFound(err) { // element does not exist, we need to create it
-		log.Debug("no mcp usage element found. Creating a new one", "objectKey", objectKey)
-
-		now := metav1.NewTime(time.Now().UTC())
-		mcpUsage = v1.MCPUsage{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      objectKey.Name,
-				Namespace: objectKey.Namespace,
-			},
-			Spec: v1.MCPUsageSpec{
-				Project:           project,
-				Workspace:         workspace,
-				MCP:               mcp_name,
-				Usage:             []v1.DailyUsage{},
-				LastUsageCaptured: now,
-				MCPCreatedAt:      now,
-			},
+	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		var mcpUsage v1.MCPUsage
+		err = u.client.Get(ctx, objectKey, &mcpUsage)
+		if err != nil && !k8serrors.IsNotFound(err) {
+			return fmt.Errorf("error at getting MCPUsage resource for %v: %w", mcp_name, err)
 		}
 
-		err = u.client.Create(ctx, &mcpUsage)
-		if err != nil {
-			return fmt.Errorf("error when creating MCPUsage resource: %w", err)
-		}
-	} else {
-		// check if mcpUsage element wants to be deleted
-		if !mcpUsage.Spec.MCPDeletedAt.IsZero() {
-			log.Debug("mcp was deleted in the past, update last usage captured and proceed")
-			// MCP was deleted, now created with the same name, update lastUsageCapture
-			mcpUsage.Spec.LastUsageCaptured = metav1.NewTime(time.Now().UTC())
-			err = u.client.Update(ctx, &mcpUsage)
+		mcpUsage.Name = objectKey.Name
+
+		if k8serrors.IsNotFound(err) { // element does not exist, we need to create it
+			log.Debug("no mcp usage element found. Creating a new one", "objectKey", objectKey)
+
+			now := metav1.NewTime(time.Now().UTC())
+			mcpUsage = v1.MCPUsage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      objectKey.Name,
+					Namespace: objectKey.Namespace,
+				},
+				Spec: v1.MCPUsageSpec{
+					Project:           project,
+					Workspace:         workspace,
+					MCP:               mcp_name,
+					Usage:             []v1.DailyUsage{},
+					LastUsageCaptured: now,
+					MCPCreatedAt:      now,
+				},
+			}
+
+			err = u.client.Create(ctx, &mcpUsage)
 			if err != nil {
-				return fmt.Errorf("error when updating status for MCPUsage resource: %w", err)
+				return fmt.Errorf("error when creating MCPUsage resource: %w", err)
 			}
 		} else {
-			// event was fired one time to much? do nothing and return later
-			log.Debug("create or update event was fired again but MCPUsage is already valid, ignore it")
+			// check if mcpUsage element wants to be deleted
+			if !mcpUsage.Spec.MCPDeletedAt.IsZero() {
+				log.Debug("mcp was deleted in the past, update last usage captured and proceed")
+				// MCP was deleted, now created with the same name, update lastUsageCapture
+				mcpUsage.Spec.LastUsageCaptured = metav1.NewTime(time.Now().UTC())
+				err = u.client.Update(ctx, &mcpUsage)
+				if err != nil {
+					if k8serrors.IsConflict(err) {
+						fmt.Printf("Conflict detected for McpUsage %s, retrying...\n", mcpUsage.Name)
+						return err
+					}
+					return fmt.Errorf("error when updating status for MCPUsage resource: %w", err)
+				}
+			} else {
+				// event was fired one time to much? do nothing and return later
+				log.Debug("create or update event was fired again but MCPUsage is already valid, ignore it")
+			}
+
 		}
 
+		return nil
+	})
+
+	if err != nil {
+		return fmt.Errorf("error when updating mcp usage resource: %w", err)
 	}
 
 	log.Debug("update charging target for mcpusage element")
 	// ALWAYS: Check charging target and override it to make sure always the latest charging target is there.
-	err = u.UpdateChargingTarget(ctx, &mcpUsage)
+	err = u.UpdateChargingTarget(ctx, project, workspace, mcp_name)
 	if err != nil {
 		return fmt.Errorf("error when updating charging target: %w", err)
 	}
@@ -102,34 +117,55 @@ func (u *UsageTracker) CreateOrUpdateEvent(ctx context.Context, project string, 
 	return nil
 }
 
-func (u *UsageTracker) UpdateChargingTarget(ctx context.Context, mcpUsage *v1.MCPUsage) error {
-	var project, workspace, mcp_name = mcpUsage.Spec.Project, mcpUsage.Spec.Workspace, mcpUsage.Spec.MCP
+func (u *UsageTracker) UpdateChargingTarget(ctx context.Context, project string, workspace string, mcp_name string) error {
 	log := u.initLogger("update-charging-target", project, workspace, mcp_name)
-
-	chargingTarget, err := helper.ResolveChargingTarget(ctx, u.client, project, workspace, mcp_name)
+	objectKey, err := GetObjectKey(project, workspace, mcp_name)
 	if err != nil {
-		log.Error(err, fmt.Sprintf("error when resolving charging target %s %s %s", project, workspace, mcp_name))
-		mcpUsage.Spec.Message = "error when resolving charging target"
-		chargingTarget = "missing"
-	}
-	if chargingTarget == "" {
-		chargingTarget = "missing"
-		mcpUsage.Spec.Message = "no charging target specified"
-	}
-	mcpUsage.Spec.ChargingTarget = chargingTarget
-
-	err = u.client.Update(ctx, mcpUsage)
-	if err != nil {
-		return fmt.Errorf("error at updating MCPUsage status resource for %s %s %s: %w", project, workspace, mcp_name, err)
+		return fmt.Errorf("error getting object key: %w", err)
 	}
 
-	return nil
+	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		var mcpUsage v1.MCPUsage
+		err = u.client.Get(ctx, objectKey, &mcpUsage)
+		if err != nil && !k8serrors.IsNotFound(err) {
+			return fmt.Errorf("error at getting MCPUsage resource for %v: %w", mcp_name, err)
+		}
+
+		chargingTarget, err := helper.ResolveChargingTarget(ctx, u.client, project, workspace, mcp_name)
+		if err != nil {
+			log.Error(err, fmt.Sprintf("error when resolving charging target %s %s %s", project, workspace, mcp_name))
+			mcpUsage.Spec.Message = "error when resolving charging target"
+			chargingTarget = "missing"
+		}
+		if chargingTarget == "" {
+			chargingTarget = "missing"
+			mcpUsage.Spec.Message = "no charging target specified"
+		}
+		mcpUsage.Spec.ChargingTarget = chargingTarget
+
+		err = u.client.Update(ctx, &mcpUsage)
+		if err != nil {
+			if k8serrors.IsConflict(err) {
+				fmt.Printf("Conflict detected for McpUsage %s, retrying...\n", mcpUsage.Name)
+				return err
+			}
+			return fmt.Errorf("error at updating MCPUsage status resource for %s %s %s: %w", project, workspace, mcp_name, err)
+		}
+
+		return nil
+	})
+
+	return err
 }
 
 func (u *UsageTracker) DeletionEvent(ctx context.Context, project string, workspace string, mcp_name string) error {
 	_ = u.initLogger("deletion", project, workspace, mcp_name)
 
-	objectKey := GetObjectKey(project, workspace, mcp_name)
+	objectKey, err := GetObjectKey(project, workspace, mcp_name)
+	if err != nil {
+		return fmt.Errorf("error getting object key: %w", err)
+	}
+
 	var mcpUsage = v1.MCPUsage{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      objectKey.Name,
@@ -139,7 +175,7 @@ func (u *UsageTracker) DeletionEvent(ctx context.Context, project string, worksp
 			MCPDeletedAt: metav1.NewTime(time.Now().UTC()),
 		},
 	}
-	err := u.client.Patch(ctx, &mcpUsage, client.Merge)
+	err = u.client.Patch(ctx, &mcpUsage, client.Merge)
 	if k8serrors.IsNotFound(err) {
 		return nil
 	}
@@ -162,25 +198,42 @@ func (u *UsageTracker) ScheduledEvent(ctx context.Context) error {
 
 	var errs error
 	for _, mcpUsage := range mcpUsages.Items {
-		if !mcpUsage.Spec.MCPDeletedAt.IsZero() {
-			// mcp does not exist anymore
-			continue
-		}
+		err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			var project, workspace, mcp_name = mcpUsage.Spec.Project, mcpUsage.Spec.Workspace, mcpUsage.Spec.MCP
+			log = log.WithValues(
+				"project", project,
+				"workspace", workspace,
+				"mcp", mcp_name,
+			)
 
-		var project, workspace, mcp_name = mcpUsage.Spec.Project, mcpUsage.Spec.Workspace, mcpUsage.Spec.MCP
-		log = log.WithValues(
-			"project", project,
-			"workspace", workspace,
-			"mcp", mcp_name,
-		)
+			err = u.client.Get(ctx, client.ObjectKey{
+				Name: mcpUsage.Name,
+			}, &mcpUsage)
+			if err != nil {
+				return err
+			}
 
-		usages := calculateUsage(now, mcpUsage.Spec.LastUsageCaptured.Time)
-		usages = MergeDailyUsages(usages, mcpUsage.Spec.Usage)
+			if !mcpUsage.Spec.MCPDeletedAt.IsZero() {
+				// mcp does not exist anymore
+				return nil
+			}
 
-		mcpUsage.Spec.Usage = usages
-		mcpUsage.Spec.LastUsageCaptured = metav1.NewTime(now)
-		err = u.client.Update(ctx, &mcpUsage)
-		errs = errors.Join(errs, err)
+			usages := calculateUsage(now, mcpUsage.Spec.LastUsageCaptured.Time)
+			usages = MergeDailyUsages(usages, mcpUsage.Spec.Usage)
+
+			mcpUsage.Spec.Usage = usages
+			mcpUsage.Spec.LastUsageCaptured = metav1.NewTime(now)
+			err = u.client.Update(ctx, &mcpUsage)
+			if err != nil {
+				if k8serrors.IsConflict(err) {
+					fmt.Printf("Conflict detected for McpUsage %s, retrying...\n", mcpUsage.Name)
+					return err
+				}
+				return fmt.Errorf("failed to update McpUsage %s: %w", mcpUsage.Name, err)
+			}
+
+			return nil
+		})
 	}
 
 	if errs != nil {
@@ -205,15 +258,36 @@ func (u *UsageTracker) GarbageCollection(ctx context.Context) error {
 
 	var errs error
 	for _, mcpUsage := range mcpUsages.Items {
-		usagesToKeep := make([]v1.DailyUsage, 0, len(mcpUsage.Spec.Usage))
-		for _, usage := range mcpUsage.Spec.Usage {
-			if !usage.Date.Time.Before(latestTimestamp) {
-				usagesToKeep = append(usagesToKeep, usage)
+		err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			err = u.client.Get(ctx, client.ObjectKey{
+				Name: mcpUsage.Name,
+			}, &mcpUsage)
+			if err != nil {
+				return err
 			}
+
+			usagesToKeep := make([]v1.DailyUsage, 0, len(mcpUsage.Spec.Usage))
+			for _, usage := range mcpUsage.Spec.Usage {
+				if !usage.Date.Time.Before(latestTimestamp) {
+					usagesToKeep = append(usagesToKeep, usage)
+				}
+			}
+			mcpUsage.Spec.Usage = usagesToKeep
+			err = u.client.Update(ctx, &mcpUsage)
+			if err != nil {
+				if k8serrors.IsConflict(err) {
+					fmt.Printf("Conflict detected for McpUsage %s, retrying...\n", mcpUsage.Name)
+					return err
+				}
+				return fmt.Errorf("failed to update McpUsage %s: %w", mcpUsage.Name, err)
+			}
+
+			return nil
+		})
+
+		if err != nil {
+			errs = errors.Join(errs, fmt.Errorf("error when updating the mcp usage resource: %w", err))
 		}
-		mcpUsage.Spec.Usage = usagesToKeep
-		err = u.client.Update(ctx, &mcpUsage)
-		errs = errors.Join(errs, err)
 	}
 
 	if errs != nil {

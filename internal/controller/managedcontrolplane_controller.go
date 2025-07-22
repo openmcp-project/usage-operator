@@ -93,18 +93,6 @@ func (r *ManagedControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	// if mcp.Status.ObservedGeneration == 0 {
-	// 	log.Info("mcp '" + mcp.Name + "' was created.")
-	// 	return ctrl.Result{}, nil
-	// }
-
-	// if mcp.Status.ObservedGeneration != mcp.Generation {
-	// 	log.Info("mcp '" + mcp.Name + "' was updated.")
-	// 	return ctrl.Result{}, nil
-	// }
-
-	// log.Info("mcp '" + mcp.Name + "' got just a status update.")
-
 	return ctrl.Result{}, nil
 }
 

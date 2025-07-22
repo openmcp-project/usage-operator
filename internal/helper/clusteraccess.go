@@ -49,14 +49,18 @@ func GetOnboardingCluster(ctx context.Context, log logging.Logger, client client
 				Rules: []rbacv1.PolicyRule{
 					{
 						APIGroups: []string{"core.openmcp.cloud"},
-						Resources: []string{"managedcontrolplanes", "managedcontrolplanes/status"},
-						Verbs:     []string{"get", "list"},
+						Resources: []string{
+							"managedcontrolplanes", "managedcontrolplanes/status",
+							"projects", "projects/status",
+							"workspaces", "workspaces/status",
+						},
+						Verbs: []string{"get", "list", "watch"},
 					},
 					{
 						APIGroups:     []string{"apiextensions.k8s.io"},
 						Resources:     []string{"customresourcedefinitions"},
-						Verbs:         []string{"create", "update", "delete"},
-						ResourceNames: []string{"mcpusage"},
+						Verbs:         []string{"get", "patch", "create", "update", "delete"},
+						ResourceNames: []string{"mcpusages.usage.openmcp.cloud"},
 					},
 					{
 						APIGroups: []string{"usage.openmcp.cloud"},
