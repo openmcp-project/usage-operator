@@ -2,7 +2,6 @@ package helper
 
 import (
 	"context"
-	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -21,17 +20,11 @@ const (
 
 	ChargingTargetLabelKey = "openmcp.cloud.sap/charging-target"
 	ChargingTarget         = "12345678"
-
-	timeout  = time.Second * 10
-	duration = time.Second * 10
-	interval = time.Millisecond * 250
 )
 
 var (
 	projectNamespaceName   string
 	workspaceNamespaceName string
-
-	mcpUsageName string
 )
 
 var _ = Describe("Charging Target Resolver", Ordered, func() {

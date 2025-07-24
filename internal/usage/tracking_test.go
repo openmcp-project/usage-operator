@@ -56,7 +56,7 @@ var _ = Describe("Tracking Module", Ordered, func() {
 		}
 		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&mcpUsage), &mcpUsage)).Should(Succeed())
 
-		Expect(mcpUsage.Spec.Usage).ShouldNot(HaveLen(0))
+		Expect(mcpUsage.Spec.Usage).ShouldNot(BeEmpty())
 	})
 
 	It("garbage collect old usage data", func() {

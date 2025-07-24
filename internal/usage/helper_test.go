@@ -24,16 +24,16 @@ var _ = Describe("Helper Module", func() {
 
 			result := calculateUsage(start, end)
 
-			Ω(result).Should(HaveLen(8))
+			Expect(result).Should(HaveLen(8))
 
-			Ω(result[0].Date.Time.Equal(endDate)).Should(BeTrue(), "first date must equal end date")
-			Ω(result[0].Usage.Duration).Should(Equal(firstDayDuration), "first day must have the right duration")
+			Expect(result[0].Date.Time.Equal(endDate)).Should(BeTrue(), "first date must equal end date")
+			Expect(result[0].Usage.Duration).Should(Equal(firstDayDuration), "first day must have the right duration")
 			for _, usage := range result[1:] {
-				Ω(usage.Usage.Duration).Should(Equal(24 * time.Hour))
+				Expect(usage.Usage.Duration).Should(Equal(24 * time.Hour))
 			}
 
 			reversed := calculateUsage(end, start)
-			Ω(result).Should(Equal(reversed), "the calculation must be reversed the same")
+			Expect(result).Should(Equal(reversed), "the calculation must be reversed the same")
 		})
 
 		It("should merge dailyusage", func() {
@@ -41,13 +41,13 @@ var _ = Describe("Helper Module", func() {
 				{
 					Date: metav1.NewTime(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
 					Usage: metav1.Duration{
-						Duration: time.Duration(4 * time.Hour),
+						Duration: 4 * time.Hour,
 					},
 				},
 				{
 					Date: metav1.NewTime(time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC)),
 					Usage: metav1.Duration{
-						Duration: time.Duration(4 * time.Hour),
+						Duration: 4 * time.Hour,
 					},
 				},
 			}
@@ -56,23 +56,23 @@ var _ = Describe("Helper Module", func() {
 				{
 					Date: metav1.NewTime(time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC)),
 					Usage: metav1.Duration{
-						Duration: time.Duration(20 * time.Hour),
+						Duration: 20 * time.Hour,
 					},
 				},
 				{
 					Date: metav1.NewTime(time.Date(2025, 1, 3, 0, 0, 0, 0, time.UTC)),
 					Usage: metav1.Duration{
-						Duration: time.Duration(8 * time.Hour),
+						Duration: 8 * time.Hour,
 					},
 				},
 			}
 
 			mergedUsages := MergeDailyUsages(dailyUsage1, dailyUsage2)
 
-			Ω(len(mergedUsages)).Should(Equal(3))
+			Expect(mergedUsages).Should(HaveLen(3))
 
-			Ω(mergedUsages[1].Date).Should(Equal(metav1.NewTime(time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC))))
-			Ω(mergedUsages[1].Usage.Hours()).Should(Equal(24.0))
+			Expect(mergedUsages[1].Date).Should(Equal(metav1.NewTime(time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC))))
+			Expect(mergedUsages[1].Usage.Hours()).Should(Equal(24.0))
 		})
 	})
 	Context("ObjectKey Generation", func() {
@@ -82,11 +82,11 @@ var _ = Describe("Helper Module", func() {
 			mcp := "Test"
 
 			key1, err := GetObjectKey(project, workspace, mcp)
-			Ω(err).Should(BeNil())
+			Expect(err).ShouldNot(HaveOccurred())
 			key2, err := GetObjectKey(project, workspace, mcp)
-			Ω(err).Should(BeNil())
+			Expect(err).ShouldNot(HaveOccurred())
 
-			Ω(key1.Name).Should(Equal(key2.Name))
+			Expect(key1.Name).Should(Equal(key2.Name))
 		})
 	})
 })
