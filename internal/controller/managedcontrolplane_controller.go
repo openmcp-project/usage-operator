@@ -21,7 +21,7 @@ import (
 	"errors"
 	"regexp"
 
-	"github.com/openmcp-project/controller-utils/pkg/logging"
+	"github.com/go-logr/logr"
 	corev1alpha1 "github.com/openmcp-project/mcp-operator/api/core/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -52,7 +52,7 @@ type ManagedControlPlaneReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.21.0/pkg/reconcile
 func (r *ManagedControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log, err := logging.FromContext(ctx)
+	log, err := logr.FromContext(ctx)
 	if err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
@@ -75,10 +75,10 @@ func (r *ManagedControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.
 	project := matches[1]
 	workspace := matches[2]
 
-	log.Info("mcp '" + mcp.Name + "' status '" + string(mcp.Status.Status) + "'")
+	log.Info("reconcile", "mcp", mcp.Name, "status", string(mcp.Status.Status))
 
 	if mcp.GetDeletionTimestamp() != nil || mcp.Status.Status == corev1alpha1.MCPStatusDeleting {
-		log.Info("mcp '" + mcp.Name + "' was deleted. Tracking it...")
+		log.Info("mcp was deleted", "mcp", mcp.Name)
 		err := r.UsageTracker.DeletionEvent(ctx, project, workspace, mcp.Name)
 		if err != nil {
 			log.Error(err, "error when tracking deletion")

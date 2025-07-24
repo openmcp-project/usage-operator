@@ -87,7 +87,6 @@ spec:
                 type: string
             required:
             - charging_target
-            - daily_usage
             - mcp
             - project
             - workspace
