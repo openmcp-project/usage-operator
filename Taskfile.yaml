@@ -47,7 +47,7 @@ tasks:
   download-crds:
     internal: true
     cmds:
-      - gh api https://api.github.com/repos/openmcp-project/mcp-operator/contents/api/crds/manifests | jq -r '.[] | select(.type=="file") | .download_url' | xargs -n 1 curl -s -O -J
-      - gh api https://api.github.com/repos/openmcp-project/project-workspace-operator/contents/api/crds/manifests | jq -r '.[] | select(.type=="file") | .download_url' | xargs -n 1 curl -s -O -J
+      - curl -s https://api.github.com/repos/openmcp-project/mcp-operator/contents/api/crds/manifests | jq -r '.[] | select(.type=="file") | .download_url' | xargs -n 1 curl -s -O -J
+      - curl -s https://api.github.com/repos/openmcp-project/project-workspace-operator/contents/api/crds/manifests | jq -r '.[] | select(.type=="file") | .download_url' | xargs -n 1 curl -s -O -J
     dir: external-crds
     desc: "Download CRD files from mcp-operator GitHub repository"
