@@ -1,0 +1,106 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.18.0
+  name: memberoverrides.core.openmcp.cloud
+spec:
+  group: core.openmcp.cloud
+  names:
+    kind: MemberOverrides
+    listKind: MemberOverridesList
+    plural: memberoverrides
+    singular: memberoverrides
+  scope: Cluster
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: MemberOverrides is a resource used to Manage admin access to
+          the Project/Workspace operator resources.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              memberOverrides:
+                items:
+                  properties:
+                    kind:
+                      description: Kind of object being referenced. Can be "User",
+                        "Group", or "ServiceAccount".
+                      enum:
+                      - User
+                      - Group
+                      - ServiceAccount
+                      type: string
+                    name:
+                      description: Name of the object being referenced.
+                      type: string
+                    namespace:
+                      description: Namespace of the referenced object. Required if
+                        Kind is "ServiceAccount". Must not be specified if Kind is
+                        "User" or "Group".
+                      type: string
+                    resources:
+                      description: Resources defines an optional list of projects/workspaces
+                        that this override applies to.
+                      items:
+                        properties:
+                          kind:
+                            enum:
+                            - project
+                            - workspace
+                            type: string
+                          name:
+                            description: Name of the object being referenced.
+                            type: string
+                        required:
+                        - kind
+                        - name
+                        type: object
+                      type: array
+                    roles:
+                      description: Roles defines a list of roles that this override
+                        subject should have.
+                      items:
+                        enum:
+                        - admin
+                        - view
+                        type: string
+                      type: array
+                  required:
+                  - kind
+                  - name
+                  - roles
+                  type: object
+                  x-kubernetes-validations:
+                  - message: Namespace must not be specified if Kind is User or Group
+                    rule: self.kind == 'ServiceAccount' || !has(self.__namespace__)
+                  - message: Namespace is required for ServiceAccount
+                    rule: self.kind != 'ServiceAccount' || has(self.__namespace__)
+                type: array
+            required:
+            - memberOverrides
+            type: object
+          status:
+            type: object
+        type: object
+    served: true
+    storage: true

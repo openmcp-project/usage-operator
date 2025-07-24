@@ -79,7 +79,7 @@ var _ = BeforeSuite(func() {
 		CRDDirectoryPaths: []string{
 			filepath.Join("..", "..", "api", "crds", "manifests"),
 			// Add external CRD directories here:
-			filepath.Join("..", "..", "external-crds"),
+			filepath.Join("..", "..", "hack", "external-crds"),
 			// Add more paths as needed
 		},
 		ErrorIfCRDPathMissing: false,
