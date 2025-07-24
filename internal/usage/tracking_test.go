@@ -21,8 +21,6 @@ const (
 	mcpUsageName = "test"
 )
 
-var usageTracker *UsageTracker
-
 var _ = Describe("Tracking Module", Ordered, func() {
 	BeforeAll(func() {
 		ctx := context.Background()
