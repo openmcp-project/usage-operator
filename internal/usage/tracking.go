@@ -120,7 +120,6 @@ func (u *UsageTracker) CreateOrUpdateEvent(ctx context.Context, project string, 
 func (u *UsageTracker) UpdateChargingTarget(ctx context.Context, project string, workspace string, mcp_name string) error {
 	log := u.initLogger(ctx, "charging_target", project, workspace, mcp_name)
 
-	// log := u.initLogger("update-charging-target", project, workspace, mcp_name)
 	objectKey, err := GetObjectKey(project, workspace, mcp_name)
 	if err != nil {
 		return fmt.Errorf("error getting object key: %w", err)
