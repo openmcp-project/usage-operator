@@ -94,8 +94,6 @@ func MergeDailyUsages(a []v1.DailyUsage, b []v1.DailyUsage) []v1.DailyUsage {
 	for dateStr, totalUsage := range aggregatedUsage {
 		t, err := time.Parse("2006-01-02", dateStr)
 		if err != nil {
-			// This error should ideally not happen if dateKey is always valid.
-			// In a real application, you might log this or handle it more robustly.
 			continue
 		}
 		mergedList = append(mergedList, v1.DailyUsage{

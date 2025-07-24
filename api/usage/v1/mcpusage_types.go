@@ -32,7 +32,7 @@ type MCPUsageSpec struct {
 	Project           string       `json:"project"`
 	Workspace         string       `json:"workspace"`
 	MCP               string       `json:"mcp"`
-	Usage             []DailyUsage `json:"daily_usage"`
+	Usage             []DailyUsage `json:"daily_usage,omitempty"`
 	LastUsageCaptured metav1.Time  `json:"last_usage_captured,omitempty"`
 	MCPCreatedAt      metav1.Time  `json:"mcp_created_at,omitempty"`
 	MCPDeletedAt      metav1.Time  `json:"mcp_deleted_at,omitempty"`

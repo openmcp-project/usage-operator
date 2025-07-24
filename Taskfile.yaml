@@ -4,6 +4,23 @@ includes:
   shared:
     taskfile: hack/common/Taskfile_controller.yaml
     flatten: true
+    excludes: # put task names in here which are overwritten in this file
+      - generate:code
+    vars:
+      NESTED_MODULES: ""
+      API_DIRS: "{{.ROOT_DIR}}/api/..."
+      MANIFEST_OUT: "{{.ROOT_DIR}}/api/crds/manifests"
+      CODE_DIRS: "{{.ROOT_DIR}}/cmd/... {{.ROOT_DIR}}/internal/... {{.ROOT_DIR}}/api/..."
+      COMPONENTS: "usage-operator"
+      REPO_URL: "https://github.com/openmcp-project/usage-operator"
+      GENERATE_DOCS_INDEX: "true"
+      CHART_COMPONENTS: "[]"
+      ENVTEST_REQUIRED: "true"
+  common: # imported a second time so that overwriting task definitions can call the overwritten task with a 'c:' prefix
+    taskfile: hack/common/Taskfile_controller.yaml
+    internal: true
+    aliases:
+      - c
     excludes: [] # put task names in here which are overwritten in this file
     vars:
       NESTED_MODULES: ""
@@ -15,3 +32,22 @@ includes:
       GENERATE_DOCS_INDEX: "true"
       CHART_COMPONENTS: "[]"
       ENVTEST_REQUIRED: "true"
+
+tasks:
+  generate:code: # overwrites shared code task to add external API fetching
+    desc: "  Generate code (mainly DeepCopy functions) and fetches external APIs."
+    aliases:
+      - gen:code
+      - g:code
+    run: once
+    cmds:
+      - task: download-crds
+      - task: c:generate:code
+
+  download-crds:
+    internal: true
+    cmds:
+      - gh api https://api.github.com/repos/openmcp-project/mcp-operator/contents/api/crds/manifests | jq -r '.[] | select(.type=="file") | .download_url' | xargs -n 1 curl -s -O -J
+      - gh api https://api.github.com/repos/openmcp-project/project-workspace-operator/contents/api/crds/manifests | jq -r '.[] | select(.type=="file") | .download_url' | xargs -n 1 curl -s -O -J
+    dir: external-crds
+    desc: "Download CRD files from mcp-operator GitHub repository"

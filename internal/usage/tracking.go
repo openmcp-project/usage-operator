@@ -12,7 +12,8 @@ import (
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/openmcp-project/controller-utils/pkg/logging"
+	"github.com/go-logr/logr"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	v1 "github.com/openmcp-project/usage-operator/api/usage/v1"
 	"github.com/openmcp-project/usage-operator/internal/helper"
@@ -20,19 +21,18 @@ import (
 
 type UsageTracker struct {
 	client client.Client
-	log    *logging.Logger
 }
 
-func NewUsageTracker(log *logging.Logger, client client.Client) (*UsageTracker, error) {
+func NewUsageTracker(client client.Client) (*UsageTracker, error) {
 	return &UsageTracker{
-		log:    log,
 		client: client,
 	}, nil
-
 }
 
-func (u *UsageTracker) initLogger(name, project, workspace, mcp_name string) logging.Logger {
-	return u.log.WithName("tracker-"+name).WithValues(
+func (u *UsageTracker) initLogger(ctx context.Context, name, project, workspace, mcp_name string) logr.Logger {
+	log := logf.FromContext(ctx)
+
+	return log.WithName(name).WithValues(
 		"project", project,
 		"workspace", workspace,
 		"mcp", mcp_name,
@@ -40,7 +40,7 @@ func (u *UsageTracker) initLogger(name, project, workspace, mcp_name string) log
 }
 
 func (u *UsageTracker) CreateOrUpdateEvent(ctx context.Context, project string, workspace string, mcp_name string) error {
-	log := u.initLogger("creation-update", project, workspace, mcp_name)
+	log := u.initLogger(ctx, "creation-update", project, workspace, mcp_name)
 
 	objectKey, err := GetObjectKey(project, workspace, mcp_name)
 	if err != nil {
@@ -57,7 +57,7 @@ func (u *UsageTracker) CreateOrUpdateEvent(ctx context.Context, project string, 
 		mcpUsage.Name = objectKey.Name
 
 		if k8serrors.IsNotFound(err) { // element does not exist, we need to create it
-			log.Debug("no mcp usage element found. Creating a new one", "objectKey", objectKey)
+			log.Info("no mcp usage element found. Creating a new one", "objectKey", objectKey)
 
 			now := metav1.NewTime(time.Now().UTC())
 			mcpUsage = v1.MCPUsage{
@@ -82,20 +82,20 @@ func (u *UsageTracker) CreateOrUpdateEvent(ctx context.Context, project string, 
 		} else {
 			// check if mcpUsage element wants to be deleted
 			if !mcpUsage.Spec.MCPDeletedAt.IsZero() {
-				log.Debug("mcp was deleted in the past, update last usage captured and proceed")
+				log.Info("mcp was deleted in the past, update last usage captured and proceed")
 				// MCP was deleted, now created with the same name, update lastUsageCapture
 				mcpUsage.Spec.LastUsageCaptured = metav1.NewTime(time.Now().UTC())
 				err = u.client.Update(ctx, &mcpUsage)
 				if err != nil {
 					if k8serrors.IsConflict(err) {
-						fmt.Printf("Conflict detected for McpUsage %s, retrying...\n", mcpUsage.Name)
+						log.Info("conflict detected when updating resource", "MCPUsage", mcpUsage.Name)
 						return err
 					}
 					return fmt.Errorf("error when updating status for MCPUsage resource: %w", err)
 				}
 			} else {
 				// event was fired one time to much? do nothing and return later
-				log.Debug("create or update event was fired again but MCPUsage is already valid, ignore it")
+				log.Info("create or update event was fired again but MCPUsage is already valid, ignore it")
 			}
 
 		}
@@ -107,7 +107,7 @@ func (u *UsageTracker) CreateOrUpdateEvent(ctx context.Context, project string, 
 		return fmt.Errorf("error when updating mcp usage resource: %w", err)
 	}
 
-	log.Debug("update charging target for mcpusage element")
+	log.Info("update charging target for mcpusage element")
 	// ALWAYS: Check charging target and override it to make sure always the latest charging target is there.
 	err = u.UpdateChargingTarget(ctx, project, workspace, mcp_name)
 	if err != nil {
@@ -118,7 +118,9 @@ func (u *UsageTracker) CreateOrUpdateEvent(ctx context.Context, project string, 
 }
 
 func (u *UsageTracker) UpdateChargingTarget(ctx context.Context, project string, workspace string, mcp_name string) error {
-	log := u.initLogger("update-charging-target", project, workspace, mcp_name)
+	log := u.initLogger(ctx, "charging_target", project, workspace, mcp_name)
+
+	// log := u.initLogger("update-charging-target", project, workspace, mcp_name)
 	objectKey, err := GetObjectKey(project, workspace, mcp_name)
 	if err != nil {
 		return fmt.Errorf("error getting object key: %w", err)
@@ -146,7 +148,7 @@ func (u *UsageTracker) UpdateChargingTarget(ctx context.Context, project string,
 		err = u.client.Update(ctx, &mcpUsage)
 		if err != nil {
 			if k8serrors.IsConflict(err) {
-				fmt.Printf("Conflict detected for McpUsage %s, retrying...\n", mcpUsage.Name)
+				fmt.Printf("Conflict detected for MCPUsage %s, retrying...\n", mcpUsage.Name)
 				return err
 			}
 			return fmt.Errorf("error at updating MCPUsage status resource for %s %s %s: %w", project, workspace, mcp_name, err)
@@ -159,7 +161,7 @@ func (u *UsageTracker) UpdateChargingTarget(ctx context.Context, project string,
 }
 
 func (u *UsageTracker) DeletionEvent(ctx context.Context, project string, workspace string, mcp_name string) error {
-	_ = u.initLogger("deletion", project, workspace, mcp_name)
+	_ = u.initLogger(ctx, "deletion", project, workspace, mcp_name)
 
 	objectKey, err := GetObjectKey(project, workspace, mcp_name)
 	if err != nil {
@@ -187,7 +189,8 @@ func (u *UsageTracker) DeletionEvent(ctx context.Context, project string, worksp
 }
 
 func (u *UsageTracker) ScheduledEvent(ctx context.Context) error {
-	log := u.log.WithName("scheduled")
+	log := logf.FromContext(ctx).WithName("scheduled")
+
 	var mcpUsages v1.MCPUsageList
 	err := u.client.List(ctx, &mcpUsages)
 	if err != nil {
@@ -226,7 +229,7 @@ func (u *UsageTracker) ScheduledEvent(ctx context.Context) error {
 			err = u.client.Update(ctx, &mcpUsage)
 			if err != nil {
 				if k8serrors.IsConflict(err) {
-					fmt.Printf("Conflict detected for McpUsage %s, retrying...\n", mcpUsage.Name)
+					log.Error(err, "Conflict detected for McpUsage, retrying...\n", "mcpUsage", mcpUsage.Name)
 					return err
 				}
 				return fmt.Errorf("failed to update McpUsage %s: %w", mcpUsage.Name, err)
@@ -234,6 +237,10 @@ func (u *UsageTracker) ScheduledEvent(ctx context.Context) error {
 
 			return nil
 		})
+
+		if err != nil {
+			errs = errors.Join(errs, err)
+		}
 	}
 
 	if errs != nil {
@@ -244,7 +251,7 @@ func (u *UsageTracker) ScheduledEvent(ctx context.Context) error {
 }
 
 func (u *UsageTracker) GarbageCollection(ctx context.Context) error {
-	_ = u.log.WithName("scheduled")
+	log := logf.FromContext(ctx).WithName("garbage")
 
 	var mcpUsages v1.MCPUsageList
 	err := u.client.List(ctx, &mcpUsages)
@@ -255,6 +262,8 @@ func (u *UsageTracker) GarbageCollection(ctx context.Context) error {
 	now := time.Now().UTC().Truncate(time.Hour * 24)
 	oneMonth := time.Hour * 24 * 32
 	latestTimestamp := now.Add(-oneMonth)
+
+	log.Info("garbage collect old entries", "before", latestTimestamp)
 
 	var errs error
 	for _, mcpUsage := range mcpUsages.Items {
@@ -276,7 +285,7 @@ func (u *UsageTracker) GarbageCollection(ctx context.Context) error {
 			err = u.client.Update(ctx, &mcpUsage)
 			if err != nil {
 				if k8serrors.IsConflict(err) {
-					fmt.Printf("Conflict detected for McpUsage %s, retrying...\n", mcpUsage.Name)
+					log.Error(err, "Conflict detected for McpUsage, retrying...\n", "mcpUsage", mcpUsage.Name)
 					return err
 				}
 				return fmt.Errorf("failed to update McpUsage %s: %w", mcpUsage.Name, err)

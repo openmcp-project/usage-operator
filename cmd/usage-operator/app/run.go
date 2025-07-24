@@ -275,7 +275,7 @@ func (o *RunOptions) Run(ctx context.Context) error {
 		return fmt.Errorf("unable to create manager: %w", err)
 	}
 
-	usageTracker, err := usage.NewUsageTracker(&o.Log, mgr.GetClient())
+	usageTracker, err := usage.NewUsageTracker(mgr.GetClient())
 	if err != nil {
 		return fmt.Errorf("unable to create usage tracker: %w", err)
 	}
