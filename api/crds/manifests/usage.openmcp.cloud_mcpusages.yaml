@@ -55,6 +55,8 @@ spec:
             properties:
               charging_target:
                 type: string
+              charging_target_type:
+                type: string
               daily_usage:
                 items:
                   properties:
@@ -87,6 +89,7 @@ spec:
                 type: string
             required:
             - charging_target
+            - charging_target_type
             - mcp
             - project
             - workspace

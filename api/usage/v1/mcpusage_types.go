@@ -28,14 +28,15 @@ import (
 
 // MCPUsageSpec defines the desired state of MCPUsage.
 type MCPUsageSpec struct {
-	ChargingTarget    string       `json:"charging_target"`
-	Project           string       `json:"project"`
-	Workspace         string       `json:"workspace"`
-	MCP               string       `json:"mcp"`
-	Usage             []DailyUsage `json:"daily_usage,omitempty"`
-	LastUsageCaptured metav1.Time  `json:"last_usage_captured,omitempty"`
-	MCPCreatedAt      metav1.Time  `json:"mcp_created_at,omitempty"`
-	MCPDeletedAt      metav1.Time  `json:"mcp_deleted_at,omitempty"`
+	ChargingTarget     string       `json:"charging_target"`
+	ChargingTargetType string       `json:"charging_target_type"`
+	Project            string       `json:"project"`
+	Workspace          string       `json:"workspace"`
+	MCP                string       `json:"mcp"`
+	Usage              []DailyUsage `json:"daily_usage,omitempty"`
+	LastUsageCaptured  metav1.Time  `json:"last_usage_captured,omitempty"`
+	MCPCreatedAt       metav1.Time  `json:"mcp_created_at,omitempty"`
+	MCPDeletedAt       metav1.Time  `json:"mcp_deleted_at,omitempty"`
 
 	Message string `json:"message,omitempty"`
 }

@@ -132,7 +132,7 @@ func (u *UsageTracker) UpdateChargingTarget(ctx context.Context, project string,
 			return fmt.Errorf("error at getting MCPUsage resource for %v: %w", mcp_name, err)
 		}
 
-		chargingTarget, err := helper.ResolveChargingTarget(ctx, u.client, project, workspace, mcp_name)
+		chargingTarget, chargingTargetType, err := helper.ResolveChargingTarget(ctx, u.client, project, workspace, mcp_name)
 		if err != nil {
 			log.Error(err, fmt.Sprintf("error when resolving charging target %s %s %s", project, workspace, mcp_name))
 			mcpUsage.Spec.Message = "error when resolving charging target"
@@ -143,6 +143,7 @@ func (u *UsageTracker) UpdateChargingTarget(ctx context.Context, project string,
 			mcpUsage.Spec.Message = "no charging target specified"
 		}
 		mcpUsage.Spec.ChargingTarget = chargingTarget
+		mcpUsage.Spec.ChargingTargetType = chargingTargetType
 
 		err = u.client.Update(ctx, &mcpUsage)
 		if err != nil {

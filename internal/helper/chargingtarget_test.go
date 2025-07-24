@@ -18,8 +18,8 @@ const (
 	WorkspaceName = "workspace"
 	MCPName       = "test-mcp"
 
-	ChargingTargetLabelKey = "openmcp.cloud.sap/charging-target"
-	ChargingTarget         = "12345678"
+	ChargingTarget     = "12345678"
+	ChargingTargetType = "btp"
 )
 
 var (
@@ -51,7 +51,8 @@ var _ = Describe("Charging Target Resolver", Ordered, func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name: ProjectName,
 				Labels: map[string]string{
-					ChargingTargetLabelKey: ChargingTarget,
+					labelChargingTarget:     ChargingTarget,
+					labelChargingTargetType: ChargingTargetType,
 				},
 			},
 		}
@@ -74,10 +75,11 @@ var _ = Describe("Charging Target Resolver", Ordered, func() {
 
 	It("Should resolve the charging target", func() {
 		ctx := context.Background()
-		resolvedChargingTarget, err := ResolveChargingTarget(ctx, k8sClient, ProjectName, WorkspaceName, MCPName)
+		resolvedChargingTarget, resolvedChargingTargetType, err := ResolveChargingTarget(ctx, k8sClient, ProjectName, WorkspaceName, MCPName)
 		Expect(err).ShouldNot(HaveOccurred())
 
 		Expect(resolvedChargingTarget).Should(Equal(ChargingTarget))
+		Expect(resolvedChargingTargetType).Should(Equal(ChargingTargetType))
 	})
 
 	It("Should resolve the workspace charging target, if set", func() {
@@ -92,14 +94,16 @@ var _ = Describe("Charging Target Resolver", Ordered, func() {
 		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&workspace), &workspace)).Should(Succeed())
 
 		workspace.SetLabels(map[string]string{
-			ChargingTargetLabelKey: "9876543",
+			labelChargingTarget:     "9876543",
+			labelChargingTargetType: "btp",
 		})
 		Expect(k8sClient.Update(ctx, &workspace)).Should(Succeed())
 
-		resolvedChargingTarget, err := ResolveChargingTarget(ctx, k8sClient, ProjectName, WorkspaceName, MCPName)
+		resolvedChargingTarget, resolvedChargingTargetType, err := ResolveChargingTarget(ctx, k8sClient, ProjectName, WorkspaceName, MCPName)
 		Expect(err).ShouldNot(HaveOccurred())
 
 		Expect(resolvedChargingTarget).Should(Equal("9876543"))
+		Expect(resolvedChargingTargetType).Should(Equal("btp"))
 	})
 
 	It("Should resolve the mcp charging target, if set", func() {
@@ -114,13 +118,15 @@ var _ = Describe("Charging Target Resolver", Ordered, func() {
 		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&mcp), &mcp)).Should(Succeed())
 
 		mcp.SetLabels(map[string]string{
-			ChargingTargetLabelKey: "14689283",
+			labelChargingTarget:     "14689283",
+			labelChargingTargetType: "btp",
 		})
 		Expect(k8sClient.Update(ctx, &mcp)).Should(Succeed())
 
-		resolvedChargingTarget, err := ResolveChargingTarget(ctx, k8sClient, ProjectName, WorkspaceName, MCPName)
+		resolvedChargingTarget, resolvedChargingTargetType, err := ResolveChargingTarget(ctx, k8sClient, ProjectName, WorkspaceName, MCPName)
 		Expect(err).ShouldNot(HaveOccurred())
 
 		Expect(resolvedChargingTarget).Should(Equal("14689283"))
+		Expect(resolvedChargingTargetType).Should(Equal("btp"))
 	})
 })
