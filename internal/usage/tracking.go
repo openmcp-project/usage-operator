@@ -147,7 +147,7 @@ func (u *UsageTracker) UpdateChargingTarget(ctx context.Context, project string,
 		err = u.client.Update(ctx, &mcpUsage)
 		if err != nil {
 			if k8serrors.IsConflict(err) {
-				fmt.Printf("Conflict detected for MCPUsage %s, retrying...\n", mcpUsage.Name)
+				log.Info("Conflict detected for MCPUsage, retrying...", "MCPUsageName", mcpUsage.Name)
 				return err
 			}
 			return fmt.Errorf("error at updating MCPUsage status resource for %s %s %s: %w", project, workspace, mcp_name, err)
