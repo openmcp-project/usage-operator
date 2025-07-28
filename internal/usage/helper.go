@@ -15,6 +15,14 @@ import (
 
 const DAY = 24 * time.Hour
 
+func limitUsage(val time.Duration, max time.Duration) time.Duration {
+	if val > max {
+		return max
+	}
+
+	return val
+}
+
 func calculateUsage(start time.Time, end time.Time) (result []v1.DailyUsage) {
 	start = start.UTC()
 	end = end.UTC()
@@ -31,7 +39,7 @@ func _calculateUsage(current time.Time, end time.Time, duration time.Duration) [
 		// its the same day, so we need to put the remaining duration onto the current day
 		return []v1.DailyUsage{{
 			Date:  metav1.NewTime(current),
-			Usage: metav1.Duration{Duration: duration},
+			Usage: metav1.Duration{Duration: limitUsage(duration, DAY)},
 		}}
 
 	}
@@ -46,7 +54,7 @@ func _calculateUsage(current time.Time, end time.Time, duration time.Duration) [
 	return append(_calculateUsage(nextDay, end, duration-usageForTheDay),
 		v1.DailyUsage{
 			Date:  metav1.NewTime(current),
-			Usage: metav1.Duration{Duration: usageForTheDay},
+			Usage: metav1.Duration{Duration: limitUsage(usageForTheDay, DAY)},
 		},
 	)
 }
@@ -98,7 +106,7 @@ func MergeDailyUsages(a []v1.DailyUsage, b []v1.DailyUsage) []v1.DailyUsage {
 		}
 		mergedList = append(mergedList, v1.DailyUsage{
 			Date:  metav1.Time{Time: t.UTC()}, // Store as UTC for consistency
-			Usage: totalUsage,
+			Usage: metav1.Duration{Duration: limitUsage(totalUsage.Duration, DAY)},
 		})
 	}
 
