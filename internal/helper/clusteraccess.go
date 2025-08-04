@@ -31,10 +31,10 @@ func GetOnboardingCluster(ctx context.Context, log logging.Logger, client client
 	// Add CRD type to scheme
 	utilruntime.Must(apiextensionsv1.AddToScheme(onboardingScheme))
 
-	providerSystemNamespace := os.Getenv(openmcpconstv1alpha1.EnvVariablePlatformClusterNamespace)
+	providerSystemNamespace := os.Getenv(openmcpconstv1alpha1.EnvVariablePodNamespace)
 	if providerSystemNamespace == "" {
-		log.Error(nil, fmt.Sprintf("environment variable %s is not set", openmcpconstv1alpha1.EnvVariablePlatformClusterNamespace))
-		return nil, fmt.Errorf("environment variable %s is not set", openmcpconstv1alpha1.EnvVariablePlatformClusterNamespace)
+		log.Error(nil, fmt.Sprintf("environment variable %s is not set", openmcpconstv1alpha1.EnvVariablePodNamespace))
+		return nil, fmt.Errorf("environment variable %s is not set", openmcpconstv1alpha1.EnvVariablePodNamespace)
 	}
 
 	clusterAccessManager := clusteraccess.NewClusterAccessManager(client, api.UsageOperatorPlatformServiceName, providerSystemNamespace).

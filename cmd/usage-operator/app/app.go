@@ -46,6 +46,7 @@ type RawSharedOptions struct {
 	DryRun      bool   `json:"dry-run"`
 
 	PlatformCluster *clusters.Cluster `json:"platform-cluster"`
+	ProviderName    string            `json:"provider-name"`
 }
 
 type SharedOptions struct {
@@ -61,6 +62,7 @@ func (o *SharedOptions) AddPersistentFlags(cmd *cobra.Command) {
 	// misc
 	cmd.PersistentFlags().BoolVar(&o.DryRun, "dry-run", false, "If set, the command aborts after evaluation of the given flags.")
 	cmd.PersistentFlags().StringVar(&o.Environment, "environment", "", "Environment name. Required. This is used to distinguish between different environments that are watching the same Onboarding cluster. Must be globally unique.")
+	cmd.PersistentFlags().StringVar(&o.ProviderName, "provider-name", "", "Name of the provider resource")
 
 	o.PlatformCluster.RegisterSingleConfigPathFlag(cmd.PersistentFlags())
 }
