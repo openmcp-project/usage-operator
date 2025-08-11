@@ -59,8 +59,13 @@ func GetOnboardingCluster(ctx context.Context, log logging.Logger, client client
 					{
 						APIGroups:     []string{"apiextensions.k8s.io"},
 						Resources:     []string{"customresourcedefinitions"},
-						Verbs:         []string{"get", "patch", "create", "update", "delete"},
+						Verbs:         []string{"get", "patch", "update", "delete"},
 						ResourceNames: []string{"mcpusages.usage.openmcp.cloud"},
+					},
+					{
+						APIGroups: []string{"apiextensions.k8s.io"},
+						Resources: []string{"customresourcedefinitions"},
+						Verbs:     []string{"create"},
 					},
 					{
 						APIGroups: []string{"usage.openmcp.cloud"},
