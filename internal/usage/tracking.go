@@ -168,19 +168,17 @@ func (u *UsageTracker) DeletionEvent(ctx context.Context, project string, worksp
 		return fmt.Errorf("error getting object key: %w", err)
 	}
 
-	var mcpUsage = v1.MCPUsage{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      objectKey.Name,
-			Namespace: objectKey.Namespace,
-		},
-		Spec: v1.MCPUsageSpec{
-			MCPDeletedAt: metav1.NewTime(time.Now().UTC()),
-		},
-	}
-	err = u.client.Patch(ctx, &mcpUsage, client.Merge)
+	var mcpUsage v1.MCPUsage
+	err = u.client.Get(ctx, objectKey, &mcpUsage)
 	if k8serrors.IsNotFound(err) {
 		return nil
 	}
+	if err != nil {
+		return fmt.Errorf("error getting MCPUsage resource: %w", err)
+	}
+
+	mcpUsage.Spec.MCPDeletedAt = metav1.NewTime(time.Now().UTC())
+	err = u.client.Update(ctx, &mcpUsage)
 	if err != nil {
 		return fmt.Errorf("error when setting deletion timestamp on MCPUsage element: %w", err)
 	}
