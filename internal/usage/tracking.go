@@ -168,25 +168,15 @@ func (u *UsageTracker) DeletionEvent(ctx context.Context, project string, worksp
 		return fmt.Errorf("error getting object key: %w", err)
 	}
 
-	var mcpUsage v1.MCPUsage
-	err = u.client.Get(ctx, objectKey, &mcpUsage)
-	if k8serrors.IsNotFound(err) {
-		return nil
-	}
-	if err != nil {
-		return fmt.Errorf("error getting MCPUsage resource: %w", err)
-	}
-
-	mcpUsage.Spec.MCPDeletedAt = metav1.NewTime(time.Now().UTC())
-	err = u.client.Update(ctx, &mcpUsage)
-	if err != nil {
+	deletedAt := metav1.NewTime(time.Now().UTC())
 	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		var mcpUsage v1.MCPUsage
 		// Re-fetch the latest version to avoid update conflicts
 		err := u.client.Get(ctx, objectKey, &mcpUsage)
 		if err != nil {
 			return fmt.Errorf("error getting MCPUsage resource during retry: %w", err)
 		}
-		mcpUsage.Spec.MCPDeletedAt = metav1.NewTime(time.Now().UTC())
+		mcpUsage.Spec.MCPDeletedAt = deletedAt
 		err = u.client.Update(ctx, &mcpUsage)
 		if err != nil {
 			if k8serrors.IsConflict(err) {
@@ -196,6 +186,7 @@ func (u *UsageTracker) DeletionEvent(ctx context.Context, project string, worksp
 		}
 		return nil
 	})
+
 	if err != nil {
 		return err
 	}
