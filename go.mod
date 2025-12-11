@@ -11,7 +11,7 @@ require (
 	github.com/openmcp-project/mcp-operator/api v0.48.0
 	github.com/openmcp-project/openmcp-operator/api v0.17.1
 	github.com/openmcp-project/openmcp-operator/lib v0.17.1
-	github.com/openmcp-project/project-workspace-operator/api v0.13.1
+	github.com/openmcp-project/project-workspace-operator/api v0.19.0
 	github.com/spf13/cobra v1.9.1
 	k8s.io/api v0.34.2
 	k8s.io/apiextensions-apiserver v0.34.2
