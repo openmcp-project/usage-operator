@@ -7,12 +7,13 @@ import (
 
 	"github.com/openmcp-project/controller-utils/pkg/clusters"
 	"github.com/openmcp-project/controller-utils/pkg/logging"
-	"github.com/openmcp-project/openmcp-operator/api/install"
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/yaml"
+
+	"github.com/openmcp-project/usage-operator/api/install"
 )
 
 func NewUsageOperatorCommand(ctx context.Context) *cobra.Command {
