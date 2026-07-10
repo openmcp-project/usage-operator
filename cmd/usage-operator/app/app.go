@@ -7,13 +7,9 @@ import (
 
 	"github.com/openmcp-project/controller-utils/pkg/clusters"
 	"github.com/openmcp-project/controller-utils/pkg/logging"
-	clustersv1alpha1 "github.com/openmcp-project/openmcp-operator/api/clusters/v1alpha1"
+	"github.com/openmcp-project/openmcp-operator/api/install"
 	"github.com/spf13/cobra"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/tools/clientcmd/api"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/yaml"
@@ -72,11 +68,7 @@ func (o *SharedOptions) Complete() error {
 	if err := o.PlatformCluster.InitializeRESTConfig(); err != nil {
 		return fmt.Errorf("unable to initialize platform cluster rest config: %w", err)
 	}
-	platformScheme := runtime.NewScheme()
-	utilruntime.Must(clientgoscheme.AddToScheme(platformScheme))
-	utilruntime.Must(apiextensionsv1.AddToScheme(platformScheme))
-	utilruntime.Must(clustersv1alpha1.AddToScheme(platformScheme))
-	utilruntime.Must(api.AddToScheme(platformScheme))
+	platformScheme := install.InstallOperatorAPIsPlatform(install.InstallCRDAPIs(runtime.NewScheme()))
 
 	if err := o.PlatformCluster.InitializeClient(platformScheme); err != nil {
 		return fmt.Errorf("unable to initialize platform cluster client: %w", err)
