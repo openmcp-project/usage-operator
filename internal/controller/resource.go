@@ -278,7 +278,7 @@ func RequeueAtTrackingPeriodEnd(usage *usagev1alpha1.ResourceUsage) reconcile.Re
 // As a side effect, this also registers the manual reconciliation trigger and the function to start informers for specific GVKs in the shared information instance.
 func (c *TrackedResourceController) SetupWithManager(mgr ctrl.Manager) error {
 	var err error
-	c.internal, err = controller.NewTyped[TypedRequest](TrackedResourceControllerName, mgr, controller.TypedOptions[TypedRequest]{Reconciler: c})
+	c.internal, err = controller.NewTyped(TrackedResourceControllerName, mgr, controller.TypedOptions[TypedRequest]{Reconciler: c})
 	if err != nil {
 		return fmt.Errorf("error creating typed controller: %w", err)
 	}
