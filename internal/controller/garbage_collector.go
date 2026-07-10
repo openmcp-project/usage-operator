@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	"slices"
 	"time"
 
@@ -54,7 +55,12 @@ func (c *GarbageCollector) getConfig() *usagev1alpha1.GarbageCollectionConfig {
 
 // Start makes the GarbageCollector implement the Runnable interface, so it can be started by the controller-runtime manager.
 func (c *GarbageCollector) Start(ctx context.Context) error {
-	log := logging.FromContextOrPanic(ctx).WithName(GarbageCollectorName)
+	// controller-runtime does not inject a logger here, since this is not a controller, so we need to create one ourselves
+	log, err := logging.GetLogger()
+	if err != nil {
+		return fmt.Errorf("unable to create or get logger: %w", err)
+	}
+	log = log.WithName(GarbageCollectorName)
 	ctx = logging.NewContext(ctx, log)
 	log.Info("Starting GarbageCollector runnable")
 
