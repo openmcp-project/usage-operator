@@ -310,3 +310,30 @@ func (c *TrackedResourceController) SetupWithManager(mgr ctrl.Manager) error {
 	})
 	return nil
 }
+
+// StartupReconciliation is meant to trigger a reconciliation for all resources with non-completed ResourceUsage objects at the startup of the operator.
+// This includes especially those, which are not watched anymore due to a config change. Their corresponding ResourceUsage objects would otherwise never be completed.
+// Note that this function IS NOT MEANT TO BE CALLED MANUALLY. Instead, it should be passed into mgr.Add(manager.RunnableFunc(<here>)) to be executed at the startup of the operator.
+// The controller's SetupWithManager function must be called before this function, so that the manual reconciliation trigger is set up in the shared information instance.
+func (c *TrackedResourceController) StartupReconciliation(ctx context.Context) error {
+	rus := &usagev1alpha1.ResourceUsageList{}
+	if err := c.OnboardingCluster.Client().List(ctx, rus); err != nil {
+		return fmt.Errorf("error listing ResourceUsage objects: %w", err)
+	}
+
+	for _, ru := range rus.Items {
+		if ru.Status.Phase != usagev1alpha1.UsagePhaseOngoing {
+			continue
+		}
+		obj := &unstructured.Unstructured{}
+		obj.SetGroupVersionKind(schema.GroupVersionKind{
+			Group:   ru.Spec.Resource.Group,
+			Version: ru.Spec.Resource.Version,
+			Kind:    ru.Spec.Resource.Kind,
+		})
+		obj.SetName(ru.Spec.Resource.Name)
+		obj.SetNamespace(ru.Spec.Resource.Namespace)
+		shared.SharedInformation().TriggerReconcile(obj)
+	}
+	return nil
+}
