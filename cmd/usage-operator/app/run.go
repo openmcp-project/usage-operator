@@ -10,6 +10,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/certwatcher"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -273,7 +274,11 @@ func (o *RunOptions) Run(ctx context.Context) error {
 	if err := mgr.Add(gc); err != nil { // garbage collector implements the Runnable interface, so it can be started by the manager
 		return fmt.Errorf("unable to add garbage collector to manager: %w", err)
 	}
-	// TODO: queue non-completed ResourceUsage objects for reconciliation on startup, to ensure that they are eventually completed
+	// This part is meant to ensure that ResourceUsage objects belonging to resources which are not tracked anymore will eventually be completed.
+	// It achieves this by manually triggering a reconciliation for all resources which have corresponding non-completed ResourceUsage objects on startup.
+	if err := mgr.Add(manager.RunnableFunc(resourceCtrl.StartupReconciliation)); err != nil {
+		return fmt.Errorf("unable to add startup reconciliation to manager: %w", err)
+	}
 
 	// +kubebuilder:scaffold:builder
 
