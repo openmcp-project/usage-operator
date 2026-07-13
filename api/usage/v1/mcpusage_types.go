@@ -21,6 +21,7 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -100,5 +101,8 @@ type MCPUsageList struct {
 }
 
 func init() {
-	SchemeBuilder.Register(&MCPUsage{}, &MCPUsageList{})
+	SchemeBuilder.Register(func(scheme *runtime.Scheme) error {
+		scheme.AddKnownTypes(GroupVersion, &MCPUsage{}, &MCPUsageList{})
+		return nil
+	})
 }
