@@ -117,7 +117,7 @@ func (c *GarbageCollector) CollectGarbage(ctx context.Context) {
 
 	// list all completed ResourceUsage objects
 	rus := &usagev1alpha1.ResourceUsageList{}
-	if err := c.OnboardingCluster.Client().List(ctx, rus, client.MatchingFields{".status.phase": "Completed"}); err != nil {
+	if err := c.OnboardingCluster.Client().List(ctx, rus, client.MatchingFields{"status.phase": "Completed"}); err != nil {
 		log.Error(err, "Error listing ResourceUsage objects")
 		return
 	}

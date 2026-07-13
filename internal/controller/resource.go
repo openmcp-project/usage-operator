@@ -230,11 +230,11 @@ func (c *TrackedResourceController) handleStopTracking(ctx context.Context, ut *
 func (c *TrackedResourceController) fetchResourceUsages(ctx context.Context, req TypedRequest, now time.Time) ([]*usagev1alpha1.ResourceUsage, error) {
 	rul := &usagev1alpha1.ResourceUsageList{}
 	if err := c.OnboardingCluster.Client().List(ctx, rul, client.MatchingFields{
-		".spec.resource.group":     req.Group,
-		".spec.resource.version":   req.Version,
-		".spec.resource.kind":      req.Kind,
-		".spec.resource.name":      req.Name,
-		".spec.resource.namespace": req.Namespace,
+		"spec.resource.group":     req.Group,
+		"spec.resource.version":   req.Version,
+		"spec.resource.kind":      req.Kind,
+		"spec.resource.name":      req.Name,
+		"spec.resource.namespace": req.Namespace,
 	}); err != nil {
 		return nil, fmt.Errorf("error listing ResourceUsage objects for resource %s (%s): %w", req.NamespacedName.String(), req.GroupVersionKind.String(), err)
 	}
