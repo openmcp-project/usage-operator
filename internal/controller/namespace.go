@@ -10,9 +10,10 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/openmcp-project/controller-utils/pkg/clusters"
 	ctrlutils "github.com/openmcp-project/controller-utils/pkg/controller"
@@ -94,10 +95,9 @@ func (c *NamespaceController) reconcile(ctx context.Context, req reconcile.Reque
 // SetupWithManager sets up the controller with the Manager.
 func (c *NamespaceController) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		// watch Namespace resources
-		For(&corev1.Namespace{}, builder.WithPredicates(
-			// only changes to namespaces are relevant, because neither freshly created nor deleted namespaces can contain any tracked resources
-			ctrlutils.OnUpdatePredicate(),
-		)).
+		Named("namespace").
+		// watch Namespace resources on the onboarding cluster
+		// only update events are relevant, because neither freshly created nor deleted namespaces can contain any tracked resources
+		WatchesRawSource(source.Kind(c.OnboardingCluster.Cluster().GetCache(), &corev1.Namespace{}, &handler.TypedEnqueueRequestForObject[*corev1.Namespace]{}, ctrlutils.ToTypedPredicate[*corev1.Namespace](ctrlutils.OnUpdatePredicate()))).
 		Complete(c)
 }
