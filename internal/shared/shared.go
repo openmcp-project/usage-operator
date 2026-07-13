@@ -27,6 +27,7 @@ type sharedInformation struct {
 	garbageCollectionConfig        *usagev1alpha1.GarbageCollectionConfig
 	garbageCollectionTrigger       chan struct{} // informs the garbage collector about a changed garbage collection configuration, also triggering a garbage collection run
 	missedGarbageCollectionTrigger bool          // indicates that the garbage collection trigger was used before being setup
+	initialized                    bool          // will be true if the config controller has reconciled at least once since the last restart of the operator
 }
 
 func SharedInformation() *sharedInformation {
@@ -164,4 +165,21 @@ func (si *sharedInformation) SetGarbageCollectionTrigger(trigger chan struct{}) 
 
 	si.garbageCollectionTrigger = trigger
 	return si.missedGarbageCollectionTrigger
+}
+
+func (si *sharedInformation) SetInitialized() {
+	si.lock.Lock()
+	defer si.lock.Unlock()
+
+	si.initialized = true
+}
+
+// IsInitialized returns true if the config controller has reconciled successfully at least once since the last restart of the operator.
+// This is used to prevent the resource controllers from reconciling resources before the config has been read,
+// in which case they would incorrectly assume that no resources are being tracked and stop tracking all resources.
+func (si *sharedInformation) IsInitialized() bool {
+	si.lock.RLock()
+	defer si.lock.RUnlock()
+
+	return si.initialized
 }

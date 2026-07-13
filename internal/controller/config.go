@@ -36,6 +36,7 @@ type ConfigController struct {
 	PlatformCluster *clusters.Cluster
 	er              events.EventRecorder
 	ProviderName    string
+	initialized     bool
 }
 
 func NewConfigController(platformCluster *clusters.Cluster, providerName string, er events.EventRecorder) *ConfigController {
@@ -62,6 +63,10 @@ func (c *ConfigController) Reconcile(ctx context.Context, req reconcile.Request)
 				c.er.Eventf(cfg, nil, corev1.EventTypeNormal, "ReconcileSuccess", EventActionReconcile, "Reconcile successful")
 			}
 		}
+	}
+	if !c.initialized && err == nil {
+		shared.SharedInformation().SetInitialized()
+		c.initialized = true
 	}
 
 	return rr, err

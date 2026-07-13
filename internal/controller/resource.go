@@ -61,6 +61,13 @@ func (c *TrackedResourceController) Reconcile(ctx context.Context, req TypedRequ
 func (c *TrackedResourceController) reconcile(ctx context.Context, req TypedRequest) (reconcile.Result, error) {
 	log := logging.FromContextOrPanic(ctx)
 
+	// abort reconciliation if the config controller has not reconciled successfully at least once since the last restart of the operator
+	// otherwise, the fetched config is always empty, causing this controller to stop all resource tracking, which is not what we want
+	if !shared.SharedInformation().IsInitialized() {
+		// this is technically not an error, we are just abusing the controller-runtime's exponential backoff mechanism to postpone the reconciliation until the config controller has reconciled successfully at least once
+		return reconcile.Result{}, fmt.Errorf("unable to reconcile resource %s (%s), waiting for config controller to initialize configuration", req.NamespacedName.String(), req.GroupVersionKind.String())
+	}
+
 	// fetch resource tracking information
 	ut := shared.SharedInformation().GetWatch(req.GroupVersionKind)
 	if ut == nil {
