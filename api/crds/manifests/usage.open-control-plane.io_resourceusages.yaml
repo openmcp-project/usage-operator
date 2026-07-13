@@ -133,6 +133,8 @@ spec:
                           usage.
                         nullable: true
                         x-kubernetes-preserve-unknown-fields: true
+                    required:
+                    - value
                     type: object
                   type: array
                 description: Traits maps each trait identifier to all values the trait's
