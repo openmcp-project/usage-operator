@@ -10,9 +10,9 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	ctrlutils "github.com/openmcp-project/controller-utils/pkg/controller"
@@ -129,7 +129,7 @@ func (u *UsageTracker) NewResourceUsage(obj client.Object, traitData map[string]
 						Start: new(metav1.NewTime(now)),
 					},
 				},
-				Value: runtime.RawExtension{
+				Value: apiextensionsv1.JSON{
 					Raw: data,
 				},
 			},
@@ -208,7 +208,7 @@ func (u *UsageTracker) Track(usage *usagev1alpha1.ResourceUsage, obj client.Obje
 			// trait is not tracked yet, add a new entry to the traits map
 			usage.Spec.Traits[trait] = usagev1alpha1.TraitUsages{
 				{
-					Value: runtime.RawExtension{
+					Value: apiextensionsv1.JSON{
 						Raw: data,
 					},
 					Usage: usagev1alpha1.Timespans{
@@ -258,7 +258,7 @@ func (u *UsageTracker) Track(usage *usagev1alpha1.ResourceUsage, obj client.Obje
 			// there is no entry for the new value yet, add a new one
 			usage.Spec.Traits[trait] = append([]usagev1alpha1.TraitUsage{
 				{
-					Value: runtime.RawExtension{
+					Value: apiextensionsv1.JSON{
 						Raw: data,
 					},
 					Usage: usagev1alpha1.Timespans{

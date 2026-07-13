@@ -3,8 +3,8 @@ package v1alpha1
 import (
 	"time"
 
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 
 	commonapi "github.com/openmcp-project/openmcp-operator/api/common"
 )
@@ -85,8 +85,9 @@ type TraitUsages []TraitUsage
 
 type TraitUsage struct {
 	// Value is the value of the trait at the time of usage.
-	// x-kubernetes-preserve-unknown-fields: true
-	Value runtime.RawExtension `json:"value"`
+	// +nullable
+	// +optional
+	Value apiextensionsv1.JSON `json:"value"`
 	// Usage specifies the time periods for which the trait had this value.
 	// This can be expected to be sorted so that the latest - possibly ongoing - tracking period is first.
 	// +optional
@@ -102,8 +103,8 @@ type TraitUsage struct {
 // +kubebuilder:printcolumn:name="group",type=string,JSONPath=`.spec.resource.group`,priority=10
 // +kubebuilder:printcolumn:name="name",type=string,JSONPath=`.spec.resource.name`
 // +kubebuilder:printcolumn:name="namespace",type=string,JSONPath=`.spec.resource.namespace`
-// +kubebuilder:printcolumn:name="start",type=date,JSONPath=`.spec.startTime`
-// +kubebuilder:printcolumn:name="end",type=date,JSONPath=`.spec.endTime`
+// +kubebuilder:printcolumn:name="start",type=date,JSONPath=`.spec.trackingPeriod.start`
+// +kubebuilder:printcolumn:name="end",type=date,JSONPath=`.spec.trackingPeriod.end`
 // +kubebuilder:printcolumn:name="phase",type=string,JSONPath=`.status.phase`
 // +kubebuilder:selectablefield:JSONPath=".spec.resource.kind"
 // +kubebuilder:selectablefield:JSONPath=".spec.resource.version"

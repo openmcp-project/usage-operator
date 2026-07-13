@@ -37,10 +37,10 @@ spec:
     - jsonPath: .spec.resource.namespace
       name: namespace
       type: string
-    - jsonPath: .spec.startTime
+    - jsonPath: .spec.trackingPeriod.start
       name: start
       type: date
-    - jsonPath: .spec.endTime
+    - jsonPath: .spec.trackingPeriod.end
       name: end
       type: date
     - jsonPath: .status.phase
@@ -129,13 +129,10 @@ spec:
                           type: object
                         type: array
                       value:
-                        description: |-
-                          Value is the value of the trait at the time of usage.
-                          x-kubernetes-preserve-unknown-fields: true
-                        type: object
+                        description: Value is the value of the trait at the time of
+                          usage.
+                        nullable: true
                         x-kubernetes-preserve-unknown-fields: true
-                    required:
-                    - value
                     type: object
                   type: array
                 description: Traits maps each trait identifier to all values the trait's

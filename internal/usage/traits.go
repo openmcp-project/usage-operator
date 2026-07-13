@@ -1,7 +1,7 @@
 package usage
 
 import (
-	"bytes"
+	"encoding/json"
 	"errors"
 
 	"fmt"
@@ -26,7 +26,6 @@ func NewTraitsExtractor(defs map[string]usagev1alpha1.Trait) (*TraitsExtractor, 
 		if err := jp.Parse(fmt.Sprintf("{%s}", def.Path)); err != nil {
 			return nil, fmt.Errorf("error parsing jsonPath expression for trait '%s': %w", name, err)
 		}
-		jp.EnableJSONOutput(true)
 		res.defs[name] = PreparedTrait{
 			Trait:      def,
 			parsedPath: jp,
@@ -66,14 +65,26 @@ func (te *TraitsExtractor) ExtractTraits(obj client.Object, ns *corev1.Namespace
 	var errs error
 	res := make(map[string][]byte, len(te.defs))
 	for name, def := range te.defs {
-		var buf bytes.Buffer
-		if err := def.parsedPath.Execute(&buf, data); err != nil {
+		results, err := def.parsedPath.FindResults(data)
+		if err != nil {
 			err = fmt.Errorf("error executing jsonPath expression for trait '%s': %w", name, err)
 			errs = errors.Join(errs, err)
 			res[name] = errorJson(err)
 			continue
 		}
-		res[name] = buf.Bytes()
+		// FindResults returns [][]reflect.Value; for a single-path expression this is at most one result.
+		var value any
+		if len(results) > 0 && len(results[0]) > 0 {
+			value = results[0][0].Interface()
+		}
+		raw, err := json.Marshal(value)
+		if err != nil {
+			err = fmt.Errorf("error marshaling trait '%s' value: %w", name, err)
+			errs = errors.Join(errs, err)
+			res[name] = errorJson(err)
+			continue
+		}
+		res[name] = raw
 	}
 
 	return res, errs
