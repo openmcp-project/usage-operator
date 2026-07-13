@@ -86,7 +86,6 @@ type TraitUsages []TraitUsage
 type TraitUsage struct {
 	// Value is the value of the trait at the time of usage.
 	// +nullable
-	// +optional
 	Value apiextensionsv1.JSON `json:"value"`
 	// Usage specifies the time periods for which the trait had this value.
 	// This can be expected to be sorted so that the latest - possibly ongoing - tracking period is first.

@@ -136,20 +136,20 @@ func (c *TrackedResourceController) handleTracking(ctx context.Context, ut *usag
 
 	if len(rus) > 0 {
 		last := rus[0]
-		old := last.DeepCopy()
+		// We cannot use client.Patch here, because when updating the end time for a trait with a 'null' value, the patch will contain 'value: null',
+		// which will be interpreted as "delete the value" instead of "set the value to null". So we need to use client.Update, which will set the value to null correctly.
 
 		// check if we need a new ResourceUsage object (if the last one has ended)
 		if now.Before(last.Spec.TrackingPeriod.End.Time) {
 			// latest ResourceUsage is still active, track usage in it
 			log.Debug("Tracking in ongoing ResourceUsage object", "resourceUsage", last.Name)
 			ut.Track(last, obj, traitData, now)
-			if err := c.OnboardingCluster.Client().Patch(ctx, last, client.MergeFrom(old)); err != nil {
+			if err := c.OnboardingCluster.Client().Update(ctx, last); err != nil {
 				return reconcile.Result{}, fmt.Errorf("error tracking usage for ResourceUsage %s: %w", last.Name, err)
 			}
 			if last.Status.Phase != usagev1alpha1.UsagePhaseOngoing {
-				old = last.DeepCopy()
 				last.Status.Phase = usagev1alpha1.UsagePhaseOngoing
-				if err := c.OnboardingCluster.Client().Status().Patch(ctx, last, client.MergeFrom(old)); err != nil {
+				if err := c.OnboardingCluster.Client().Status().Update(ctx, last); err != nil {
 					return reconcile.Result{}, fmt.Errorf("error updating status for ResourceUsage %s: %w", last.Name, err)
 				}
 			}
@@ -162,11 +162,11 @@ func (c *TrackedResourceController) handleTracking(ctx context.Context, ut *usag
 			log.Info("Latest ResourceUsage's tracking period has ended, completing it", "expirationTime", last.Spec.TrackingPeriod.End.Format(time.RFC3339))
 			ut.CompleteResourceUsage(last)
 			statusBackup := last.Status.DeepCopy()
-			if err := c.OnboardingCluster.Client().Patch(ctx, last, client.MergeFrom(old)); err != nil {
+			if err := c.OnboardingCluster.Client().Update(ctx, last); err != nil {
 				return reconcile.Result{}, fmt.Errorf("error completing ResourceUsage %s (spec): %w", last.Name, err)
 			}
 			last.Status = *statusBackup
-			if err := c.OnboardingCluster.Client().Status().Patch(ctx, last, client.MergeFrom(old)); err != nil {
+			if err := c.OnboardingCluster.Client().Status().Update(ctx, last); err != nil {
 				return reconcile.Result{}, fmt.Errorf("error completing ResourceUsage %s (status): %w", last.Name, err)
 			}
 		}
@@ -208,23 +208,25 @@ func (c *TrackedResourceController) handleStopTracking(ctx context.Context, ut *
 		return reconcile.Result{}, nil
 	}
 
-	old := last.DeepCopy()
+	// We cannot use client.Patch here, because when updating the end time for a trait with a 'null' value, the patch will contain 'value: null',
+	// which will be interpreted as "delete the value" instead of "set the value to null". So we need to use client.Update, which will set the value to null correctly.
+
 	if !now.Before(last.Spec.TrackingPeriod.End.Time) {
 		log.Info("Latest ResourceUsage's tracking period has ended, completing it", "expirationTime", last.Spec.TrackingPeriod.End.Format(time.RFC3339))
 		ut.CompleteResourceUsage(last)
 		statusBackup := last.Status.DeepCopy()
-		if err := c.OnboardingCluster.Client().Patch(ctx, last, client.MergeFrom(old)); err != nil {
+		if err := c.OnboardingCluster.Client().Update(ctx, last); err != nil {
 			return reconcile.Result{}, fmt.Errorf("error completing ResourceUsage %s (spec) for resource %s (%s): %w", last.Name, req.NamespacedName.String(), req.GroupVersionKind.String(), err)
 		}
 		last.Status = *statusBackup
-		if err := c.OnboardingCluster.Client().Status().Patch(ctx, last, client.MergeFrom(old)); err != nil {
+		if err := c.OnboardingCluster.Client().Status().Update(ctx, last); err != nil {
 			return reconcile.Result{}, fmt.Errorf("error completing ResourceUsage %s (status) for resource %s (%s): %w", last.Name, req.NamespacedName.String(), req.GroupVersionKind.String(), err)
 		}
 		return reconcile.Result{}, nil
 	}
 
 	ut.StopTracking(last, now)
-	if err := c.OnboardingCluster.Client().Patch(ctx, last, client.MergeFrom(old)); err != nil {
+	if err := c.OnboardingCluster.Client().Update(ctx, last); err != nil {
 		return reconcile.Result{}, fmt.Errorf("error stopping tracking for ResourceUsage %s for resource %s (%s): %w", last.Name, req.NamespacedName.String(), req.GroupVersionKind.String(), err)
 	}
 
