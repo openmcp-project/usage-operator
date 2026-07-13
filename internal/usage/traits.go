@@ -26,6 +26,7 @@ func NewTraitsExtractor(defs map[string]usagev1alpha1.Trait) (*TraitsExtractor, 
 		if err := jp.Parse(fmt.Sprintf("{%s}", def.Path)); err != nil {
 			return nil, fmt.Errorf("error parsing jsonPath expression for trait '%s': %w", name, err)
 		}
+		jp.EnableJSONOutput(true)
 		res.defs[name] = PreparedTrait{
 			Trait:      def,
 			parsedPath: jp,
