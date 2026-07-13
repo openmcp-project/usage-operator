@@ -6,7 +6,7 @@ require (
 	github.com/go-logr/logr v1.4.3
 	github.com/google/uuid v1.6.0
 	github.com/onsi/ginkgo/v2 v2.31.0
-	github.com/onsi/gomega v1.42.0
+	github.com/onsi/gomega v1.42.1
 	github.com/openmcp-project/controller-utils v0.30.0
 	github.com/openmcp-project/mcp-operator/api v0.56.0
 	github.com/openmcp-project/openmcp-operator/api v0.21.0
