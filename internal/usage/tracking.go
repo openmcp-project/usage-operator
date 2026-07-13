@@ -98,7 +98,7 @@ func (u *UsageTracker) NewResourceUsage(obj client.Object, traitData map[string]
 	now = now.Truncate(time.Minute)
 	res := &usagev1alpha1.ResourceUsage{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: ctrlutils.ShortenToXCharactersUnsafe(fmt.Sprintf("%s-%s-", u.Config.Kind, ctrlutils.NameHashSHAKE128Base32(u.Config.Group, u.Config.Version, u.Config.Kind, obj.GetNamespace(), obj.GetName())), ctrlutils.K8sMaxNameLength-10),
+			GenerateName: ctrlutils.ShortenToXCharactersUnsafe(fmt.Sprintf("%s-%s-", strings.ToLower(u.Config.Kind), ctrlutils.NameHashSHAKE128Base32(u.Config.Group, u.Config.Version, u.Config.Kind, obj.GetNamespace(), obj.GetName())), ctrlutils.K8sMaxNameLength-10),
 		},
 		Spec: usagev1alpha1.ResourceUsageSpec{
 			Resource: usagev1alpha1.ResourceReference{
