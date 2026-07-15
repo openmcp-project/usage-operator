@@ -129,6 +129,7 @@ func (c *TrackedResourceController) handleTracking(ctx context.Context, ut *usag
 		return reconcile.Result{}, fmt.Errorf("error extracting traits for resource %s (%s): %w", req.NamespacedName.String(), req.GroupVersionKind.String(), err)
 	}
 
+	newTrackingDurationStart := obj.GetCreationTimestamp().Time.Truncate(time.Minute)
 	rus, err := c.fetchResourceUsages(ctx, req, now)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("error fetching ResourceUsage objects for resource %s (%s): %w", req.NamespacedName.String(), req.GroupVersionKind.String(), err)
@@ -170,10 +171,18 @@ func (c *TrackedResourceController) handleTracking(ctx context.Context, ut *usag
 				return reconcile.Result{}, fmt.Errorf("error completing ResourceUsage %s (status): %w", last.Name, err)
 			}
 		}
+		newTrackingDurationStart = last.Spec.TrackingPeriod.End.Time.Truncate(time.Minute)
 	}
 
 	// create new ResourceUsage object
-	ru := ut.NewResourceUsage(obj, traitData, now)
+	// We are using some heuristics here to avoid 'holes' in the tracking due to delays in the reconciliation.
+	// Basically, we assume the object to have existed unchanged (like it is now) since the end of the last tracking period, or its creation time, whichever is later.
+	// While this should be correct for the object itself, it might not be correct for the traits, which could have changed in the meantime. We expect the traits to only change rarely though, so this should be a reasonable approximation.
+	// As a safeguard, we dismiss this heuristic, if it would date the starting time back further than the configured ResourceUsage period, leading to a ResourceUsage object which would immediately needed to be completed again.
+	if now.Sub(newTrackingDurationStart) > ut.Config.ResourceUsagePeriod.Duration {
+		newTrackingDurationStart = now
+	}
+	ru := ut.NewResourceUsage(obj, traitData, newTrackingDurationStart)
 	if err := c.OnboardingCluster.Client().Create(ctx, ru); err != nil {
 		return reconcile.Result{}, fmt.Errorf("error creating new ResourceUsage for resource %s (%s): %w", req.NamespacedName.String(), req.GroupVersionKind.String(), err)
 	}
