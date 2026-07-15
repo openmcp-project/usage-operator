@@ -133,7 +133,7 @@ func (c *TrackedResourceController) handleTracking(ctx context.Context, ut *usag
 		return reconcile.Result{}, fmt.Errorf("error extracting traits for resource %s (%s): %w", req.NamespacedName.String(), req.GroupVersionKind.String(), err)
 	}
 
-	newTrackingDurationStart := obj.GetCreationTimestamp().Time.Truncate(time.Minute)
+	newTrackingDurationStart := obj.GetCreationTimestamp().Truncate(time.Minute)
 	rus, err := c.fetchResourceUsages(ctx, req, now)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("error fetching ResourceUsage objects for resource %s (%s): %w", req.NamespacedName.String(), req.GroupVersionKind.String(), err)
@@ -175,7 +175,7 @@ func (c *TrackedResourceController) handleTracking(ctx context.Context, ut *usag
 				return reconcile.Result{}, fmt.Errorf("error completing ResourceUsage %s (status): %w", last.Name, err)
 			}
 		}
-		newTrackingDurationStart = last.Spec.TrackingPeriod.End.Time.Truncate(time.Minute)
+		newTrackingDurationStart = last.Spec.TrackingPeriod.End.Truncate(time.Minute)
 	}
 
 	// create new ResourceUsage object
