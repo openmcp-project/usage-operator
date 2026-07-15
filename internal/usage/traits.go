@@ -52,9 +52,12 @@ func (te *TraitsExtractor) ExtractTraits(obj client.Object, ns *corev1.Namespace
 	if err != nil {
 		return nil, fmt.Errorf("error converting object to unstructured: %w", err)
 	}
-	rawNs, err := runtime.DefaultUnstructuredConverter.ToUnstructured(ns)
-	if err != nil {
-		return nil, fmt.Errorf("error converting namespace to unstructured: %w", err)
+	var rawNs map[string]any
+	if ns != nil {
+		rawNs, err = runtime.DefaultUnstructuredConverter.ToUnstructured(ns)
+		if err != nil {
+			return nil, fmt.Errorf("error converting namespace to unstructured: %w", err)
+		}
 	}
 
 	data := map[string]any{
