@@ -1,0 +1,17 @@
+# Ongoing ResourceUsage with no end times — used as input for CompleteResourceUsage and StopTracking
+apiVersion: usage.open-control-plane.io/v1alpha1
+kind: ResourceUsage
+metadata:
+  name: test-deployment
+spec:
+  resource:
+    group: apps
+    version: v1
+    kind: Deployment
+    name: my-deployment
+    namespace: default
+  trackingPeriod:
+    start: "2026-07-15T10:00:00Z"
+    end: "2026-07-15T11:00:00Z"
+  usage:
+  - start: "2026-07-15T10:00:00Z"

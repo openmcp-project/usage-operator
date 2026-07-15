@@ -72,10 +72,18 @@ func (te *TraitsExtractor) ExtractTraits(obj client.Object, ns *corev1.Namespace
 			res[name] = errorJson(err)
 			continue
 		}
-		// FindResults returns [][]reflect.Value; for a single-path expression this is at most one result.
+		// FindResults returns [][]reflect.Value; the inner slice holds all matched values.
 		var value any
 		if len(results) > 0 && len(results[0]) > 0 {
-			value = results[0][0].Interface()
+			if len(results[0]) == 1 {
+				value = results[0][0].Interface()
+			} else {
+				values := make([]any, len(results[0]))
+				for i, v := range results[0] {
+					values[i] = v.Interface()
+				}
+				value = values
+			}
 		}
 		raw, err := json.Marshal(value)
 		if err != nil {

@@ -1,0 +1,14 @@
+# NamespaceRequired = false: no namespace selector, no .namespace traits
+apiVersion: usage.open-control-plane.io/v1alpha1
+kind: UsageServiceConfig
+metadata:
+  name: test-03
+spec:
+  resourcesToTrack:
+  - group: apps
+    version: v1
+    kind: Deployment
+    resourceUsagePeriod: 1h
+    traits:
+      replicas:
+        path: .resource.spec.replicas
