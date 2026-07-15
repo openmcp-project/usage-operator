@@ -55,7 +55,11 @@ func (c *TrackedResourceController) Reconcile(ctx context.Context, req TypedRequ
 	log := logging.FromContextOrPanic(ctx).WithName(TrackedResourceControllerName).WithName(req.Kind).WithValues("group", req.Group, "version", req.Version, "kind", req.Kind, "name", req.Name, "namespace", req.Namespace)
 	ctx = logging.NewContext(ctx, log)
 	log.Info("Starting reconcile")
-	return c.reconcile(ctx, req)
+	res, err := c.reconcile(ctx, req)
+	if err == nil && res.RequeueAfter > 0 {
+		log.Debug("Requeuing object", "requeueAfter", res.RequeueAfter, "requeueAt", time.Now().Add(res.RequeueAfter))
+	}
+	return res, err
 }
 
 func (c *TrackedResourceController) reconcile(ctx context.Context, req TypedRequest) (reconcile.Result, error) {
