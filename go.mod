@@ -21,6 +21,8 @@ require (
 	sigs.k8s.io/yaml v1.6.0
 )
 
+replace github.com/openmcp-project/project-workspace-operator/api/v2 => github.com/openmcp-project/platform-service-project-workspaceapi/v2 v2.2.0
+
 require (
 	cel.dev/expr v0.25.2 // indirect
 	github.com/Masterminds/semver/v3 v3.5.0 // indirect
