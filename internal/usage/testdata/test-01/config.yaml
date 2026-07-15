@@ -1,0 +1,18 @@
+# NamespaceRequired = true: has a namespace selector
+apiVersion: usage.open-control-plane.io/v1alpha1
+kind: UsageServiceConfig
+metadata:
+  name: test-01
+spec:
+  resourcesToTrack:
+  - group: apps
+    version: v1
+    kind: Deployment
+    resourceUsagePeriod: 1h
+    selector:
+      namespace:
+        names:
+        - tracked-ns
+    traits:
+      replicas:
+        path: .resource.spec.replicas
