@@ -1,0 +1,39 @@
+# Resource was tracked in three separate intervals across a 3-hour period.
+# Total tracked: 30m + 45m + 60m = 135m = 2h15m. Gap of 45m total (untracked within tracking period).
+# Traits: flavor alternates between standard and premium across the intervals.
+apiVersion: usage.open-control-plane.io/v1alpha1
+kind: ResourceUsage
+metadata:
+  name: fragmented-tracking
+spec:
+  resource:
+    group: core.open-control-plane.io
+    kind: ControlPlane
+    name: test
+    namespace: test-ns
+    version: v1
+  trackingPeriod:
+    start: "2026-07-01T09:00:00Z"
+    end: "2026-07-01T12:00:00Z"
+  usage:
+  - start: "2026-07-01T11:00:00Z"
+    end: "2026-07-01T12:00:00Z"
+  - start: "2026-07-01T09:45:00Z"
+    end: "2026-07-01T10:30:00Z"
+  - start: "2026-07-01T09:00:00Z"
+    end: "2026-07-01T09:30:00Z"
+  traits:
+    flavor:
+    - value: premium
+      usage:
+      - start: "2026-07-01T11:00:00Z"
+        end: "2026-07-01T12:00:00Z"
+      - start: "2026-07-01T09:45:00Z"
+        end: "2026-07-01T10:30:00Z"
+    - value: standard
+      usage:
+      - start: "2026-07-01T09:00:00Z"
+        end: "2026-07-01T09:30:00Z"
+status:
+  phase: Completed
+  totalTrackedDuration: 2h15m0s

@@ -1,7 +1,6 @@
 package usage
 
 import (
-	"bytes"
 	"context"
 	"slices"
 	"strings"
@@ -18,6 +17,7 @@ import (
 	ctrlutils "github.com/openmcp-project/controller-utils/pkg/controller"
 	commonapi "github.com/openmcp-project/openmcp-operator/api/common"
 
+	usageapiutils "github.com/openmcp-project/usage-operator/api/utils"
 	usagev1alpha1 "github.com/openmcp-project/usage-operator/api/v1alpha1"
 )
 
@@ -232,7 +232,7 @@ func (u *UsageTracker) Track(usage *usagev1alpha1.ResourceUsage, obj client.Obje
 					break
 				}
 			}
-			if rawJSONValueEqual(usage.Spec.Traits[trait][i].Value.Raw, data) {
+			if usageapiutils.RawJSONValueEqual(usage.Spec.Traits[trait][i].Value.Raw, data) {
 				sameValueIdx = i
 				if currentIdx >= 0 {
 					break
@@ -281,19 +281,4 @@ func (u *UsageTracker) Track(usage *usagev1alpha1.ResourceUsage, obj client.Obje
 			}
 		}
 	}
-}
-
-// rawJSONValueEqual compares two raw JSON values and returns true if they are equal, false otherwise.
-// This is basically bytes.Equal, with the exception that an empty/nil value is considered equal to one containing only 'null'.
-func rawJSONValueEqual(a, b []byte) bool {
-	if len(a) == 0 {
-		if len(b) == 0 || bytes.Equal(b, []byte("null")) {
-			return true
-		}
-		return false
-	}
-	if len(b) == 0 {
-		return bytes.Equal(a, []byte("null"))
-	}
-	return bytes.Equal(a, b)
 }
