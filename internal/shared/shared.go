@@ -2,6 +2,7 @@ package shared
 
 import (
 	"fmt"
+	"reflect"
 	"sync"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -65,23 +66,36 @@ func (si *sharedInformation) GetGarbageCollectionConfig() *usagev1alpha1.Garbage
 
 // SetWatch sets or removes a watch for the given resource type (GVK) and its associated UsageTracker.
 // If tracker is nil, the watch will be removed. Otherwise, it will be set to the given tracker.
-func (si *sharedInformation) SetWatch(gvk schema.GroupVersionKind, tracker *usage.UsageTracker) error {
+// If the first return value is true, this means that the caller needs to reconcile all objects of the given GVK in order to correctly handle the configuration change.
+func (si *sharedInformation) SetWatch(gvk schema.GroupVersionKind, tracker *usage.UsageTracker) (bool, error) {
 	si.lock.Lock()
 	defer si.lock.Unlock()
 
+	reconcileRequired := false
 	if tracker == nil {
+		// reconciliation is required if a watch was actually removed
+		// because we need to stop tracking all resources of this GVK
+		_, exists := si.watchedResources[gvk]
+		reconcileRequired = reconcileRequired || exists
 		delete(si.watchedResources, gvk)
 	} else {
-		if !si.activeInformers.Has(gvk) && si.startInformer != nil {
-			if err := si.startInformer(gvk); err != nil {
-				return fmt.Errorf("error starting informer for %s: %w", gvk.String(), err)
+		if !si.activeInformers.Has(gvk) {
+			// reconciliation is not required, because starting a new informer will automatically trigger a reconcile for all existing objects of the given GVK
+			if si.startInformer == nil {
+				return false, fmt.Errorf("startInformer function is not set")
+			} else if err := si.startInformer(gvk); err != nil {
+				return false, fmt.Errorf("error starting informer for %s: %w", gvk.String(), err)
 			}
 			si.activeInformers.Insert(gvk)
+		} else {
+			// reconciliation is required if the configuration has changed (either newly added or modified), but the informer is already active
+			old, exists := si.watchedResources[gvk]
+			reconcileRequired = reconcileRequired || !exists || !reflect.DeepEqual(old.Config, tracker.Config)
 		}
 		si.watchedResources[gvk] = tracker
 
 	}
-	return nil
+	return reconcileRequired, nil
 }
 
 // GetWatch retrieves the UsageTracker associated with the given resource type (GVK).

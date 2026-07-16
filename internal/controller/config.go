@@ -7,7 +7,9 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/events"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -33,17 +35,19 @@ const (
 )
 
 type ConfigController struct {
-	PlatformCluster *clusters.Cluster
-	er              events.EventRecorder
-	ProviderName    string
-	initialized     bool
+	PlatformCluster   *clusters.Cluster
+	OnboardingCluster *clusters.Cluster
+	er                events.EventRecorder
+	ProviderName      string
+	initialized       bool
 }
 
-func NewConfigController(platformCluster *clusters.Cluster, providerName string, er events.EventRecorder) *ConfigController {
+func NewConfigController(platformCluster, onboardingCluster *clusters.Cluster, providerName string, er events.EventRecorder) *ConfigController {
 	return &ConfigController{
-		PlatformCluster: platformCluster,
-		er:              er,
-		ProviderName:    providerName,
+		PlatformCluster:   platformCluster,
+		OnboardingCluster: onboardingCluster,
+		er:                er,
+		ProviderName:      providerName,
 	}
 }
 
@@ -134,10 +138,14 @@ func (c *ConfigController) reconcile(ctx context.Context, req reconcile.Request)
 		if errs != nil {
 			return cfg, reconcile.Result{}, errs
 		}
+		gvksToReconcile := sets.New[schema.GroupVersionKind]()
 		for gvk, ut := range watchesToSet {
 			watchedBefore := shared.SharedInformation().GetWatch(gvk) != nil
-			if err := shared.SharedInformation().SetWatch(gvk, ut); err != nil {
+			rec, err := shared.SharedInformation().SetWatch(gvk, ut)
+			if err != nil {
 				errs = errors.Join(errs, fmt.Errorf("error setting up watch for %s: %w", gvk.String(), err))
+			} else if rec {
+				gvksToReconcile.Insert(gvk)
 			}
 			if c.er != nil && !watchedBefore {
 				c.er.Eventf(cfg, nil, corev1.EventTypeNormal, EventReasonWatchStarted, EventActionReconcile, "Started watching resource type %s", gvk.String())
@@ -145,12 +153,45 @@ func (c *ConfigController) reconcile(ctx context.Context, req reconcile.Request)
 		}
 		for gvk := range watchesToUnset {
 			watchedBefore := shared.SharedInformation().GetWatch(gvk) != nil
-			if err := shared.SharedInformation().SetWatch(gvk, nil); err != nil {
+			rec, err := shared.SharedInformation().SetWatch(gvk, nil)
+			if err != nil {
 				errs = errors.Join(errs, fmt.Errorf("error stopping watch for %s: %w", gvk.String(), err))
+			} else if rec {
+				gvksToReconcile.Insert(gvk)
 			}
 			if c.er != nil && watchedBefore {
 				c.er.Eventf(cfg, nil, corev1.EventTypeNormal, EventReasonWatchStopped, EventActionReconcile, "Stopped watching resource type %s", gvk.String())
 			}
+		}
+
+		// for all GVKs which require reconciliation:
+		// list all resources of that GVK and trigger a reconcile for each of them
+		// Note that this can potentially block, if the buffer for the manual reconciliation triggers is full.
+		if len(gvksToReconcile) > 0 {
+			for gvk := range gvksToReconcile {
+				gvkLog := log.WithValues("group", gvk.Group, "version", gvk.Version, "kind", gvk.Kind)
+				gvkLog.Debug("Listing all resources to trigger reconciliations")
+				resources := &unstructured.UnstructuredList{}
+				resources.SetGroupVersionKind(gvk)
+				if err := c.OnboardingCluster.Retry().List(ctx, resources); err != nil {
+					// only log, since retrying the reconciliation would not help here
+					gvkLog.Error(err, "Error listing resources")
+					continue
+				}
+				if len(resources.Items) > 0 {
+					gvkLog.Debug("Triggering resource reconciliations", "count", len(resources.Items))
+					for i := range resources.Items {
+						res := &resources.Items[i]
+						res.SetGroupVersionKind(gvk)
+						shared.SharedInformation().TriggerReconcile(res)
+					}
+				}
+			}
+			log.Debug("Triggered reconciliations for all resources with changed watch configurations")
+		}
+
+		if errs != nil {
+			return cfg, reconcile.Result{}, errs
 		}
 	}
 

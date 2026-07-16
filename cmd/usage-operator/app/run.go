@@ -258,7 +258,7 @@ func (o *RunOptions) Run(ctx context.Context) error {
 	}
 
 	// add controllers to manager
-	configCtrl := controller.NewConfigController(o.PlatformCluster, o.ProviderName, nil)
+	configCtrl := controller.NewConfigController(o.PlatformCluster, onboardingCluster, o.ProviderName, nil)
 	if err := configCtrl.SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("error setting up config controller with manager: %w", err)
 	}
