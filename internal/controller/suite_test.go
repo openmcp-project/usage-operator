@@ -43,6 +43,7 @@ const (
 	platform     = "platform"
 	onboarding   = "onboarding"
 	cfgRec       = "config"
+	nsRec        = "namespace"
 	providerName = "usage"
 )
 
@@ -96,7 +97,10 @@ func defaultTestSetup(testDirPathSegments ...string) *testutils.ComplexEnvironme
 		}).
 		WithReconcilerConstructor(cfgRec, func(clients ...client.Client) reconcile.Reconciler {
 			return controller.NewConfigController(clusters.NewTestClusterFromClient(platform, clients[0]), clusters.NewTestClusterFromClient(onboarding, clients[1]), providerName, nil)
-		}, platform, onboarding)
+		}, platform, onboarding).
+		WithReconcilerConstructor(nsRec, func(clients ...client.Client) reconcile.Reconciler {
+			return controller.NewNamespaceController(clusters.NewTestClusterFromClient(onboarding, clients[0]))
+		}, onboarding)
 	if platformDirExists {
 		envB.WithInitObjectPath(platform, append(testDirPathSegments, platform)...)
 	}
