@@ -1,69 +1,20 @@
 package controller_test
 
 import (
-	"os"
-	"path/filepath"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/openmcp-project/controller-utils/pkg/clusters"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	testutils "github.com/openmcp-project/controller-utils/pkg/testing"
 
-	"github.com/openmcp-project/usage-operator/api/install"
 	usagev1alpha1 "github.com/openmcp-project/usage-operator/api/v1alpha1"
-	"github.com/openmcp-project/usage-operator/internal/controller"
 	"github.com/openmcp-project/usage-operator/internal/shared"
 )
 
-const (
-	platform     = "platform"
-	onboarding   = "onboarding"
-	cfgRec       = "config"
-	providerName = "usage"
-)
-
-func defaultTestSetup(testDirPathSegments ...string) *testutils.ComplexEnvironment {
-	platformDirExists := true
-	_, err := os.Stat(filepath.Join(append(testDirPathSegments, platform)...))
-	Expect(err).To(Or(Not(HaveOccurred()), MatchError(os.IsNotExist, "IsNotExist")))
-	if err != nil {
-		platformDirExists = false
-	}
-	onboardingDirExists := true
-	_, err = os.Stat(filepath.Join(append(testDirPathSegments, onboarding)...))
-	Expect(err).To(Or(Not(HaveOccurred()), MatchError(os.IsNotExist, "IsNotExist")))
-	if err != nil {
-		onboardingDirExists = false
-	}
-	envB := testutils.NewComplexEnvironmentBuilder().
-		WithFakeClient(platform, install.InstallOperatorAPIsPlatform(runtime.NewScheme())).
-		WithFakeClient(onboarding, install.InstallOperatorAPIsOnboarding(runtime.NewScheme())).
-		WithReconcilerConstructor(cfgRec, func(clients ...client.Client) reconcile.Reconciler {
-			return controller.NewConfigController(clusters.NewTestClusterFromClient(platform, clients[0]), clusters.NewTestClusterFromClient(onboarding, clients[1]), providerName, nil)
-		}, platform, onboarding)
-	if platformDirExists {
-		envB.WithInitObjectPath(platform, append(testDirPathSegments, platform)...)
-	}
-	if onboardingDirExists {
-		envB.WithInitObjectPath(onboarding, append(testDirPathSegments, onboarding)...)
-	}
-	env := envB.Build()
-	return env
-}
-
-var (
-	secretGVK     = schema.GroupVersionKind{Group: "", Version: "v1", Kind: "Secret"}
-	configMapGVK  = schema.GroupVersionKind{Group: "", Version: "v1", Kind: "ConfigMap"}
-	deploymentGVK = schema.GroupVersionKind{Group: "apps", Version: "v1", Kind: "Deployment"}
-)
-
-var _ = Describe("ConfigController", Serial, func() {
+var _ = Describe("Config Controller", Serial, func() {
 
 	BeforeEach(func() {
 		resetSharedInformation()

@@ -1,0 +1,17 @@
+apiVersion: usage.open-control-plane.io/v1alpha1
+kind: ResourceUsage
+metadata:
+  name: ru-bar-05
+spec:
+  resource:
+    group: ""
+    kind: Secret
+    name: bar
+    namespace: test
+    version: v1
+  trackingPeriod:
+    end: "2026-01-06T00:00:00Z"
+    start: "2026-01-05T00:00:00Z"
+  usage: []
+status:
+  phase: Completed

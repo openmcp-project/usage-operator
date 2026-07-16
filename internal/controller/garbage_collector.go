@@ -53,6 +53,12 @@ func (c *GarbageCollector) getConfig() *usagev1alpha1.GarbageCollectionConfig {
 	return cfg
 }
 
+// GetTrigger returns the channel that triggers the garbage collector to check for a new configuration, potentially triggering a garbage collection run.
+// Mainly exposed for testing purposes, should not required to be called in production code, as the garbage collector will inject this into the shared information on startup.
+func (c *GarbageCollector) GetTrigger() chan struct{} {
+	return c.trigger
+}
+
 // Start makes the GarbageCollector implement the Runnable interface, so it can be started by the controller-runtime manager.
 func (c *GarbageCollector) Start(ctx context.Context) error {
 	// controller-runtime does not inject a logger here, since this is not a controller, so we need to create one ourselves
@@ -68,7 +74,7 @@ func (c *GarbageCollector) Start(ctx context.Context) error {
 	if runImmediately {
 		// run garbage collection immediately if the trigger was used before the channel was set up
 		// this will also adjust the interval
-		c.CollectGarbage(ctx)
+		c.CollectGarbage(ctx, time.Now())
 		c.setNextRun(log)
 	}
 
@@ -79,7 +85,7 @@ func (c *GarbageCollector) Start(ctx context.Context) error {
 		case <-ctx.Done():
 			return nil
 		case <-c.ticker.C:
-			c.CollectGarbage(ctx)
+			c.CollectGarbage(ctx, time.Now())
 			c.setNextRun(log)
 		case <-c.trigger:
 			// this happens when the configuration was (re-)loaded, potentially changing the garbage collection configuration
@@ -89,7 +95,7 @@ func (c *GarbageCollector) Start(ctx context.Context) error {
 			nextRun := c.lastRun.Add(c.interval)
 			if !nextRun.After(time.Now()) {
 				// if the next run is in the past (or now), run garbage collection immediately
-				c.CollectGarbage(ctx)
+				c.CollectGarbage(ctx, time.Now())
 				c.setNextRun(log)
 			} else {
 				// compute the duration until the next run and reset the ticker accordingly
@@ -102,7 +108,8 @@ func (c *GarbageCollector) Start(ctx context.Context) error {
 // CollectGarbage runs the garbage collection process.
 // It checks for ResourceUsage objects which are completed and obsolete (according to the garbage collection config) and deletes them.
 // Errors are simply logged, as the garbage collection will be retried on the next run.
-func (c *GarbageCollector) CollectGarbage(ctx context.Context) {
+// The 'now' argument is mainly for testing, it should always be set to time.Now() in production code.
+func (c *GarbageCollector) CollectGarbage(ctx context.Context, now time.Time) {
 	log := logging.FromContextOrPanic(ctx)
 
 	// get current garbage collection configuration
@@ -113,7 +120,7 @@ func (c *GarbageCollector) CollectGarbage(ctx context.Context) {
 	}
 
 	log.Info("Starting garbage collection")
-	c.lastRun = time.Now()
+	c.lastRun = now
 
 	// list all completed ResourceUsage objects
 	rus := &usagev1alpha1.ResourceUsageList{}
@@ -148,7 +155,7 @@ func (c *GarbageCollector) CollectGarbage(ctx context.Context) {
 				continue
 			}
 			slices.SortStableFunc(usages, func(a, b *usagev1alpha1.ResourceUsage) int {
-				return a.Spec.TrackingPeriod.End.Compare(b.Spec.TrackingPeriod.End.Time)
+				return b.Spec.TrackingPeriod.End.Compare(a.Spec.TrackingPeriod.End.Time)
 			})
 			for _, ru := range usages[gcc.KeepCount:] {
 				deleteByKeepCount.Insert(ru.Name)
@@ -157,7 +164,6 @@ func (c *GarbageCollector) CollectGarbage(ctx context.Context) {
 	}
 
 	deleteByKeepDuration := sets.New[string]()
-	now := time.Now()
 	if gcc.KeepDuration != nil {
 		for _, ru := range mapped {
 			if now.Sub(ru.Spec.TrackingPeriod.End.Time) > gcc.KeepDuration.Duration {
