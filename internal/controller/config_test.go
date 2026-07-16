@@ -14,6 +14,20 @@ import (
 	"github.com/openmcp-project/usage-operator/internal/shared"
 )
 
+// drainReconcileTrigger reads all pending events from the reconcile trigger channel and returns
+// the names of the queued objects in the form "namespace/name".
+func drainReconcileTrigger() []string {
+	var names []string
+	for {
+		select {
+		case e := <-resourceReconcileTrigger:
+			names = append(names, e.Object.GetNamespace()+"/"+e.Object.GetName())
+		default:
+			return names
+		}
+	}
+}
+
 var _ = Describe("Config Controller", Serial, func() {
 
 	BeforeEach(func() {
@@ -49,6 +63,10 @@ var _ = Describe("Config Controller", Serial, func() {
 		Expect(cmTracker.Config.ResourceUsagePeriod.Duration).To(BeEquivalentTo(720 * time.Hour))
 		Expect(cmTracker.Config.TrackUntil).To(BeEquivalentTo(usagev1alpha1.TrackUntilDeletion))
 		Expect(cmTracker.Config.Traits).To(BeEmpty())
+
+		// first reconcile adds both watches as new informers — reconcile triggering is handled by the
+		// informer startup, so nothing is queued manually here
+		Expect(drainReconcileTrigger()).To(BeEmpty())
 
 		// now we add one entry to the config and remove another one to verify that the watches are updated accordingly
 		uscfg := &usagev1alpha1.UsageServiceConfig{}
@@ -86,6 +104,35 @@ var _ = Describe("Config Controller", Serial, func() {
 
 		cmTracker = shared.SharedInformation().GetWatch(configMapGVK)
 		Expect(cmTracker).To(BeNil())
+
+		// ConfigMap watch removed: existing ConfigMaps queued. Deployment watch added: no existing Deployments.
+		// Secret watch config changed: existing Secrets queued.
+		Expect(drainReconcileTrigger()).To(ConsistOf(
+			"test/secret-01", "test/secret-02",
+			"test/configmap-01", "test/configmap-02",
+		))
+
+		// re-add ConfigMap watch — its informer is already active, so existing ConfigMaps must be queued manually
+		Expect(env.Client(platform).Get(env.Ctx, client.ObjectKeyFromObject(uscfg), uscfg)).To(Succeed())
+		uscfg.Spec.ResourcesToTrack[1].Group = configMapGVK.Group
+		uscfg.Spec.ResourcesToTrack[1].Version = configMapGVK.Version
+		uscfg.Spec.ResourcesToTrack[1].Kind = configMapGVK.Kind
+		Expect(env.Client(platform).Update(env.Ctx, uscfg)).To(Succeed())
+
+		// reconcile again
+		rr = env.ShouldReconcile(cfgRec, req)
+		Expect(rr.RequeueAfter).To(BeZero())
+
+		Expect(shared.SharedInformation().GetAllWatches()).To(HaveLen(2))
+		cmTracker = shared.SharedInformation().GetWatch(configMapGVK)
+		Expect(cmTracker).ToNot(BeNil())
+
+		// ConfigMap informer was already active: existing ConfigMaps must be queued manually
+		// Deployment watch removed: existing Deployments queued (none exist)
+		// Secret watch unchanged: nothing queued
+		Expect(drainReconcileTrigger()).To(ConsistOf(
+			"test/configmap-01", "test/configmap-02",
+		))
 	})
 
 	It("should clear all watches if the config does not exist", func() {
@@ -96,6 +143,8 @@ var _ = Describe("Config Controller", Serial, func() {
 		Expect(rr.RequeueAfter).To(BeZero())
 
 		Expect(shared.SharedInformation().GetAllWatches()).To(HaveLen(2))
+		// drain events from the first reconcile
+		drainReconcileTrigger()
 
 		// delete the config
 		uscfg := &usagev1alpha1.UsageServiceConfig{}
@@ -108,6 +157,12 @@ var _ = Describe("Config Controller", Serial, func() {
 
 		// verify that all watches have been cleared
 		Expect(shared.SharedInformation().GetAllWatches()).To(BeEmpty())
+
+		// both removed watches had existing resources — all should be queued for reconciliation
+		Expect(drainReconcileTrigger()).To(ConsistOf(
+			"test/secret-01", "test/secret-02",
+			"test/configmap-01", "test/configmap-02",
+		))
 	})
 
 	It("should clear all watches if the config is in deletion", func() {
@@ -118,6 +173,8 @@ var _ = Describe("Config Controller", Serial, func() {
 		Expect(rr.RequeueAfter).To(BeZero())
 
 		Expect(shared.SharedInformation().GetAllWatches()).To(HaveLen(2))
+		// drain events from the first reconcile
+		drainReconcileTrigger()
 
 		// add a finalizer to prevent immediate deletion
 		uscfg := &usagev1alpha1.UsageServiceConfig{}
@@ -137,6 +194,12 @@ var _ = Describe("Config Controller", Serial, func() {
 
 		// verify that all watches have been cleared
 		Expect(shared.SharedInformation().GetAllWatches()).To(BeEmpty())
+
+		// both removed watches had existing resources — all should be queued for reconciliation
+		Expect(drainReconcileTrigger()).To(ConsistOf(
+			"test/secret-01", "test/secret-02",
+			"test/configmap-01", "test/configmap-02",
+		))
 	})
 
 })

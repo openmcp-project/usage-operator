@@ -51,6 +51,51 @@ func NewConfigController(platformCluster, onboardingCluster *clusters.Cluster, p
 	}
 }
 
+// clearAllWatches removes all active watches and triggers reconciliation for all existing resources
+// of each previously watched GVK, so that they can react to the watch being removed.
+func (c *ConfigController) clearAllWatches(ctx context.Context) error {
+	var errs error
+	gvksToReconcile := sets.New[schema.GroupVersionKind]()
+	for gvk := range shared.SharedInformation().WatchedGVKs() {
+		rec, err := shared.SharedInformation().SetWatch(gvk, nil)
+		if err != nil {
+			errs = errors.Join(errs, fmt.Errorf("error stopping watch for %s: %w", gvk.String(), err))
+		} else if rec {
+			gvksToReconcile.Insert(gvk)
+		}
+	}
+	c.triggerReconciles(ctx, gvksToReconcile)
+	return errs
+}
+
+// triggerReconciles lists all existing resources for each GVK in the given set and queues them for reconciliation.
+func (c *ConfigController) triggerReconciles(ctx context.Context, gvksToReconcile sets.Set[schema.GroupVersionKind]) {
+	if len(gvksToReconcile) == 0 {
+		return
+	}
+	log := logging.FromContextOrPanic(ctx)
+	for gvk := range gvksToReconcile {
+		gvkLog := log.WithValues("group", gvk.Group, "version", gvk.Version, "kind", gvk.Kind)
+		gvkLog.Debug("Listing all resources to trigger reconciliations")
+		resources := &unstructured.UnstructuredList{}
+		resources.SetGroupVersionKind(gvk)
+		if err := c.OnboardingCluster.Retry().List(ctx, resources); err != nil {
+			// only log, since retrying the reconciliation would not help here
+			gvkLog.Error(err, "Error listing resources")
+			continue
+		}
+		if len(resources.Items) > 0 {
+			gvkLog.Debug("Triggering resource reconciliations", "count", len(resources.Items))
+			for i := range resources.Items {
+				res := &resources.Items[i]
+				res.SetGroupVersionKind(gvk)
+				shared.SharedInformation().TriggerReconcile(res)
+			}
+		}
+	}
+	log.Debug("Triggered reconciliations for all resources with changed watch configurations")
+}
+
 func (c *ConfigController) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := logging.FromContextOrPanic(ctx).WithName(ConfigControllerName)
 	ctx = logging.NewContext(ctx, log)
@@ -76,7 +121,7 @@ func (c *ConfigController) Reconcile(ctx context.Context, req reconcile.Request)
 	return rr, err
 }
 
-// nolint:unparam
+// nolint:unparam,gocyclo
 func (c *ConfigController) reconcile(ctx context.Context, req reconcile.Request) (*usagev1alpha1.UsageServiceConfig, reconcile.Result, error) {
 	log := logging.FromContextOrPanic(ctx)
 
@@ -90,7 +135,9 @@ func (c *ConfigController) reconcile(ctx context.Context, req reconcile.Request)
 	if err := c.PlatformCluster.Client().Get(ctx, req.NamespacedName, cfg); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Info("Config resource not found, disabling tracking for all resource types")
-			shared.SharedInformation().ClearWatches()
+			if err := c.clearAllWatches(ctx); err != nil {
+				return nil, reconcile.Result{}, err
+			}
 			shared.SharedInformation().SetGarbageCollectionConfig(nil)
 			return nil, reconcile.Result{}, nil
 		}
@@ -116,7 +163,9 @@ func (c *ConfigController) reconcile(ctx context.Context, req reconcile.Request)
 
 	if !cfg.DeletionTimestamp.IsZero() {
 		log.Info("UsageServiceConfig is in deletion, disabling all resource usage tracking")
-		shared.SharedInformation().ClearWatches()
+		if err := c.clearAllWatches(ctx); err != nil {
+			return nil, reconcile.Result{}, err
+		}
 		shared.SharedInformation().SetGarbageCollectionConfig(nil)
 		return nil, reconcile.Result{}, nil
 	} else {
@@ -167,28 +216,7 @@ func (c *ConfigController) reconcile(ctx context.Context, req reconcile.Request)
 		// for all GVKs which require reconciliation:
 		// list all resources of that GVK and trigger a reconcile for each of them
 		// Note that this can potentially block, if the buffer for the manual reconciliation triggers is full.
-		if len(gvksToReconcile) > 0 {
-			for gvk := range gvksToReconcile {
-				gvkLog := log.WithValues("group", gvk.Group, "version", gvk.Version, "kind", gvk.Kind)
-				gvkLog.Debug("Listing all resources to trigger reconciliations")
-				resources := &unstructured.UnstructuredList{}
-				resources.SetGroupVersionKind(gvk)
-				if err := c.OnboardingCluster.Retry().List(ctx, resources); err != nil {
-					// only log, since retrying the reconciliation would not help here
-					gvkLog.Error(err, "Error listing resources")
-					continue
-				}
-				if len(resources.Items) > 0 {
-					gvkLog.Debug("Triggering resource reconciliations", "count", len(resources.Items))
-					for i := range resources.Items {
-						res := &resources.Items[i]
-						res.SetGroupVersionKind(gvk)
-						shared.SharedInformation().TriggerReconcile(res)
-					}
-				}
-			}
-			log.Debug("Triggered reconciliations for all resources with changed watch configurations")
-		}
+		c.triggerReconciles(ctx, gvksToReconcile)
 
 		if errs != nil {
 			return cfg, reconcile.Result{}, errs
