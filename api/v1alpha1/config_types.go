@@ -74,6 +74,17 @@ type ResourceToTrack struct {
 	Traits map[string]Trait `json:"traits,omitempty"`
 }
 
+// Default sets default values in the receiver object and returns it for chaining.
+func (rtt *ResourceToTrack) Default() *ResourceToTrack {
+	if rtt.ResourceUsagePeriod == nil {
+		rtt.ResourceUsagePeriod = &metav1.Duration{Duration: 30 * 24 * time.Hour}
+	}
+	if rtt.TrackUntil == "" {
+		rtt.TrackUntil = TrackUntilDeletion
+	}
+	return rtt
+}
+
 type TrackUntilMode string
 
 const (

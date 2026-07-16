@@ -34,12 +34,27 @@ type sharedInformation struct {
 func SharedInformation() *sharedInformation {
 	if sharedInstance == nil {
 		sharedInstance = &sharedInformation{
-			lock:             &sync.RWMutex{},
-			watchedResources: map[schema.GroupVersionKind]*usage.UsageTracker{},
-			activeInformers:  sets.New[schema.GroupVersionKind](),
+			lock: &sync.RWMutex{},
 		}
+		sharedInstance.Reset() // initialize all fields to their default values
 	}
 	return sharedInstance
+}
+
+// Reset resets the state of the shared information to its initial state.
+// THIS IS ONLY FOR TESTING PURPOSES AND SHOULD NOT BE CALLED IN PRODUCTION CODE.
+func (si *sharedInformation) Reset() {
+	si.lock.Lock()
+	defer si.lock.Unlock()
+
+	si.watchedResources = map[schema.GroupVersionKind]*usage.UsageTracker{}
+	si.activeInformers = sets.New[schema.GroupVersionKind]()
+	si.startInformer = nil
+	si.reconcileTrigger = nil
+	si.garbageCollectionConfig = nil
+	si.garbageCollectionTrigger = nil
+	si.missedGarbageCollectionTrigger = false
+	si.initialized = false
 }
 
 // SetGarbageCollectionConfig sets the garbage collection configuration.
@@ -105,6 +120,18 @@ func (si *sharedInformation) GetWatch(gvk schema.GroupVersionKind) *usage.UsageT
 	defer si.lock.RUnlock()
 
 	return si.watchedResources[gvk]
+}
+
+// GetAllWatches returns a list of all currently active watches.
+func (si *sharedInformation) GetAllWatches() []*usage.UsageTracker {
+	si.lock.RLock()
+	defer si.lock.RUnlock()
+
+	watches := make([]*usage.UsageTracker, 0, len(si.watchedResources))
+	for _, tracker := range si.watchedResources {
+		watches = append(watches, tracker)
+	}
+	return watches
 }
 
 // GetWatchesForNamespaceUpdate returns a slice which contains all UsageTrackers where an update to a namespace could be relevant
@@ -196,4 +223,13 @@ func (si *sharedInformation) IsInitialized() bool {
 	defer si.lock.RUnlock()
 
 	return si.initialized
+}
+
+// GetActiveInformers returns the currently active informers as a set.
+// This for testing purposes only, production code should only use the GetWatch and GetWatchesForNamespaceUpdate methods to access the watched resources.
+func (si *sharedInformation) GetActiveInformers() sets.Set[schema.GroupVersionKind] {
+	si.lock.RLock()
+	defer si.lock.RUnlock()
+
+	return si.activeInformers.Clone()
 }
