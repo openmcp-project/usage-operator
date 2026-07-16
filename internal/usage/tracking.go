@@ -33,7 +33,7 @@ func NewUsageTracker(ctx context.Context, cfg *usagev1alpha1.ResourceToTrack) (*
 	}
 
 	return &UsageTracker{
-		Config:          cfg,
+		Config:          cfg.Default(),
 		TraitsExtractor: te,
 	}, nil
 }

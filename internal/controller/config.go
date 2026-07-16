@@ -115,7 +115,7 @@ func (c *ConfigController) reconcile(ctx context.Context, req reconcile.Request)
 	}
 
 	if !cfg.DeletionTimestamp.IsZero() {
-		log.Info("UsageServiceConfig '%s' is in deletion, disabling all resource usage tracking", cfg.Name)
+		log.Info("UsageServiceConfig is in deletion, disabling all resource usage tracking")
 		shared.SharedInformation().ClearWatches()
 		shared.SharedInformation().SetGarbageCollectionConfig(nil)
 		return nil, reconcile.Result{}, nil
