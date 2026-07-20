@@ -10,6 +10,8 @@ import (
 
 	testutils "github.com/openmcp-project/controller-utils/pkg/testing"
 
+	openmcpconst "github.com/openmcp-project/openmcp-operator/api/constants"
+
 	usagev1alpha1 "github.com/openmcp-project/usage-operator/api/v1alpha1"
 	"github.com/openmcp-project/usage-operator/internal/shared"
 )
@@ -200,6 +202,49 @@ var _ = Describe("Config Controller", Serial, func() {
 			"test/secret-01", "test/secret-02",
 			"test/configmap-01", "test/configmap-02",
 		))
+	})
+
+	It("should do nothing when the reconcile request is for a different provider name", func() {
+		env := defaultTestSetup("testdata", "config", "test-01")
+		env.ShouldReconcile(cfgRec, testutils.RequestFromStrings("usage"))
+		Expect(shared.SharedInformation().GetAllWatches()).To(HaveLen(2))
+		drainReconcileTrigger()
+
+		// reconcile with a different provider name — should be ignored
+		rr, err := env.Reconciler(cfgRec).Reconcile(env.Ctx, testutils.RequestFromStrings("other-provider"))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(rr.RequeueAfter).To(BeZero())
+
+		// watches must be unchanged
+		Expect(shared.SharedInformation().GetAllWatches()).To(HaveLen(2))
+		Expect(drainReconcileTrigger()).To(BeEmpty())
+	})
+
+	It("should do nothing when the config has the ignore operation annotation", func() {
+		env := defaultTestSetup("testdata", "config", "test-01")
+		env.ShouldReconcile(cfgRec, testutils.RequestFromStrings("usage"))
+		Expect(shared.SharedInformation().GetAllWatches()).To(HaveLen(2))
+		drainReconcileTrigger()
+
+		// set the ignore annotation
+		uscfg := &usagev1alpha1.UsageServiceConfig{}
+		uscfg.SetName("usage")
+		Expect(env.Client(platform).Get(env.Ctx, client.ObjectKeyFromObject(uscfg), uscfg)).To(Succeed())
+		annotations := uscfg.GetAnnotations()
+		if annotations == nil {
+			annotations = map[string]string{}
+		}
+		annotations[openmcpconst.OperationAnnotation] = openmcpconst.OperationAnnotationValueIgnore
+		uscfg.SetAnnotations(annotations)
+		Expect(env.Client(platform).Update(env.Ctx, uscfg)).To(Succeed())
+
+		rr, err := env.Reconciler(cfgRec).Reconcile(env.Ctx, testutils.RequestFromStrings("usage"))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(rr.RequeueAfter).To(BeZero())
+
+		// watches must be unchanged — the ignore annotation caused a no-op
+		Expect(shared.SharedInformation().GetAllWatches()).To(HaveLen(2))
+		Expect(drainReconcileTrigger()).To(BeEmpty())
 	})
 
 })

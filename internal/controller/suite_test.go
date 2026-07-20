@@ -3,6 +3,7 @@ package controller_test
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -30,10 +31,16 @@ func TestComponentUtils(t *testing.T) {
 	RunSpecs(t, "Controller Test Suite")
 }
 
-func resetSharedInformation() {
+type resetOption int
+
+const skipInitialized resetOption = iota
+
+func resetSharedInformation(opts ...resetOption) {
 	shared.SharedInformation().Reset()
 
-	shared.SharedInformation().SetInitialized()
+	if !slices.Contains(opts, skipInitialized) {
+		shared.SharedInformation().SetInitialized()
+	}
 	resourceReconcileTrigger = make(chan event.TypedGenericEvent[*unstructured.Unstructured], 1024)
 	shared.SharedInformation().SetReconcileTrigger(resourceReconcileTrigger)
 	shared.SharedInformation().SetStartInformerFunc(func(_ schema.GroupVersionKind) error { return nil })
@@ -71,6 +78,7 @@ func defaultTestSetup(testDirPathSegments ...string) *testutils.ComplexEnvironme
 	envB := testutils.NewComplexEnvironmentBuilder().
 		WithFakeClient(platform, install.InstallOperatorAPIsPlatform(runtime.NewScheme())).
 		WithFakeClient(onboarding, install.InstallOperatorAPIsOnboarding(runtime.NewScheme())).
+		WithDynamicObjectsWithStatus(onboarding, &usagev1alpha1.ResourceUsage{}).
 		WithFakeClientBuilderCall(onboarding, "WithIndex", &usagev1alpha1.ResourceUsage{}, "spec.resource.kind", func(obj client.Object) []string {
 			ru := obj.(*usagev1alpha1.ResourceUsage)
 			return []string{ru.Spec.Resource.Kind}
