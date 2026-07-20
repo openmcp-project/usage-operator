@@ -502,14 +502,14 @@ func TestGetDurationForValue(t *testing.T) {
 }
 
 // checkTraitDuration asserts that traits[traitName] contains an entry for traitValue with the expected duration.
-func checkTraitDuration(t *testing.T, traits map[string][]*TraitValueDuration, traitName, traitValue string, want time.Duration) {
+func checkTraitDuration(t *testing.T, traits map[string]TraitValueDurations, traitName, traitValue string, want time.Duration) {
 	t.Helper()
 	entries, ok := traits[traitName]
 	if !ok {
 		t.Errorf("trait %q not found in result", traitName)
 		return
 	}
-	got, err := TraitValueDurations(entries).GetDurationForValue(traitValue)
+	got, err := entries.GetDurationForValue(traitValue)
 	if err != nil {
 		t.Fatalf("GetDurationForValue(%q): %v", traitValue, err)
 	}
