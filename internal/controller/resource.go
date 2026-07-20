@@ -90,9 +90,7 @@ func (c *TrackedResourceController) reconcile(ctx context.Context, req TypedRequ
 
 	selected := false
 	var ns *corev1.Namespace
-	if ut == nil {
-		// TODO: Do we need to do something in this case?
-	} else {
+	if ut != nil {
 		// fetch namespace, if required
 		if ut.NamespaceRequired() {
 			ns = &corev1.Namespace{}
