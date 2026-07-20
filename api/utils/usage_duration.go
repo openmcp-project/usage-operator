@@ -13,10 +13,10 @@ import (
 
 // Pointerize takes a slice of objects and returns a slice of pointers to those objects.
 // It can be used to make the <object>List.Items slice from client.List calls compatible with the functions below.
-func Pointerize[T any](usages []T) []*T {
-	res := make([]*T, len(usages))
-	for i := range usages {
-		res[i] = &usages[i]
+func Pointerize[T any](objects []T) []*T {
+	res := make([]*T, len(objects))
+	for i := range objects {
+		res[i] = &objects[i]
 	}
 	return res
 }
@@ -71,10 +71,7 @@ func ComputeUsageDuration(start, end time.Time, usages ...*v1alpha1.ResourceUsag
 	}
 
 	used := mergeAndSum(intervals).Truncate(time.Minute)
-	remainder := (window - coveredByTracking.Truncate(time.Minute)).Truncate(time.Minute)
-	if remainder < 0 {
-		remainder = 0
-	}
+	remainder := max((window - coveredByTracking.Truncate(time.Minute)).Truncate(time.Minute), 0)
 	return used, remainder, nil
 }
 
@@ -143,7 +140,7 @@ func ComputeTraitUsageDuration(start, end time.Time, traitName string, traitValu
 
 // ComputeUsageDurationWithTraits works similarly to ComputeUsageDuration, but in addition to the total usage duration and the remainder duration, it also computes the total duration for which each trait had each value within the given time frame.
 // The same points mentioned for ComputeUsageDuration also apply here.
-func ComputeUsageDurationWithTraits(start, end time.Time, usages ...*v1alpha1.ResourceUsage) (time.Duration, time.Duration, map[string][]*TraitValueDuration, error) {
+func ComputeUsageDurationWithTraits(start, end time.Time, usages ...*v1alpha1.ResourceUsage) (time.Duration, time.Duration, map[string]TraitValueDurations, error) {
 	used, remainder, err := ComputeUsageDuration(start, end, usages...)
 	if err != nil {
 		return 0, 0, nil, err
@@ -183,7 +180,7 @@ func ComputeUsageDurationWithTraits(start, end time.Time, usages ...*v1alpha1.Re
 		}
 	}
 
-	result := map[string][]*TraitValueDuration{}
+	result := map[string]TraitValueDurations{}
 	for traitName, valueMap := range traitIntervals {
 		for rawJSON, ivs := range valueMap {
 			d := mergeAndSum(ivs).Truncate(time.Minute)
