@@ -16,12 +16,11 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	"github.com/openmcp-project/usage-operator/api"
 	"github.com/openmcp-project/usage-operator/api/install"
 	usagev1alpha1 "github.com/openmcp-project/usage-operator/api/v1alpha1"
 )
 
-func GetOnboardingCluster(ctx context.Context, log logging.Logger, client client.Client) (*clusters.Cluster, error) {
+func GetOnboardingCluster(ctx context.Context, log logging.Logger, client client.Client, providerName string) (*clusters.Cluster, error) {
 	onboardingScheme := install.InstallOperatorAPIsOnboarding(install.InstallCRDAPIs(runtime.NewScheme()))
 
 	providerSystemNamespace := os.Getenv(openmcpconstv1alpha1.EnvVariablePodNamespace)
@@ -30,7 +29,7 @@ func GetOnboardingCluster(ctx context.Context, log logging.Logger, client client
 		return nil, fmt.Errorf("environment variable %s is not set", openmcpconstv1alpha1.EnvVariablePodNamespace)
 	}
 
-	clusterAccessManager := clusteraccess.NewClusterAccessManager(client, api.UsageOperatorPlatformServiceName, providerSystemNamespace).
+	clusterAccessManager := clusteraccess.NewClusterAccessManager(client, providerName, providerSystemNamespace).
 		WithLogger(&log).
 		WithInterval(10 * time.Second).
 		WithTimeout(30 * time.Minute)

@@ -62,7 +62,7 @@ func (o *UninstallOptions) Run(ctx context.Context) error {
 		return fmt.Errorf("error when getting crds: %w", err)
 	}
 
-	cluster, err := helper.GetOnboardingCluster(ctx, log, o.PlatformCluster.Client())
+	cluster, err := helper.GetOnboardingCluster(ctx, log, o.PlatformCluster.Client(), o.ProviderName)
 	if err != nil {
 		return fmt.Errorf("error when getting onboarding cluster: %w", err)
 	}
