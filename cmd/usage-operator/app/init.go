@@ -59,7 +59,7 @@ func (o *InitOptions) Run(ctx context.Context) error {
 	// apply CRDs
 	crdManager := crdutil.NewCRDManager(apiconst.ClusterLabel, crds.CRDs)
 
-	onboardingCluster, err := helper.GetOnboardingCluster(ctx, log, o.PlatformCluster.Client())
+	onboardingCluster, err := helper.GetOnboardingCluster(ctx, log, o.PlatformCluster.Client(), o.ProviderName)
 	if err != nil {
 		return fmt.Errorf("error when getting onboarding cluster: %w", err)
 	}

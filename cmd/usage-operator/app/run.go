@@ -221,7 +221,7 @@ func (o *RunOptions) Run(ctx context.Context) error {
 	setupLog = o.Log.WithName("setup")
 	setupLog.Info("Environment", "value", o.Environment)
 
-	onboardingCluster, err := helper.GetOnboardingCluster(ctx, setupLog, o.PlatformCluster.Client())
+	onboardingCluster, err := helper.GetOnboardingCluster(ctx, setupLog, o.PlatformCluster.Client(), o.ProviderName)
 	if err != nil {
 		return fmt.Errorf("error getting onboarding cluster: %w", err)
 	}
