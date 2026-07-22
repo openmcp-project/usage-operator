@@ -220,6 +220,23 @@ func (tvds TraitValueDurations) GetDurationForValue(value any) (time.Duration, e
 	return 0, nil
 }
 
+// GetDominantTraitValue returns the *TraitValueDuration with the longest duration.
+// In case of a tie, the first one encountered is returned.
+// If includeNull is false, any TraitValueDuration with a value of 'null' will be ignored.
+// If there are no TraitValueDurations or all of them are ignored, nil is returned (no error).
+func (tvds TraitValueDurations) GetDominantTraitValue(includeNull bool) *TraitValueDuration {
+	var dominant *TraitValueDuration
+	for _, tvd := range tvds {
+		if !includeNull && RawJSONValueEqual(tvd.Value.Raw, nil) {
+			continue
+		}
+		if dominant == nil || tvd.Duration > dominant.Duration {
+			dominant = tvd
+		}
+	}
+	return dominant
+}
+
 // validateTrackingPeriods returns an error if any ResourceUsage has an invalid tracking period.
 func validateTrackingPeriods(usages ...*v1alpha1.ResourceUsage) error {
 	for _, u := range usages {
