@@ -574,6 +574,24 @@ func TestGetDominantTraitValue(t *testing.T) {
 	}
 }
 
+// --- TraitValueDuration.ValueAs ---
+
+func TestTraitValueDuration_ValueAs(t *testing.T) {
+	type payload struct {
+		Tier string `json:"tier"`
+	}
+
+	tvd := &TraitValueDuration{Value: jsonValue(t, payload{Tier: "premium"}), Duration: time.Hour}
+
+	var got payload
+	if err := tvd.ValueAs(&got); err != nil {
+		t.Fatalf("ValueAs: %v", err)
+	}
+	if got.Tier != "premium" {
+		t.Errorf("got tier %q, want %q", got.Tier, "premium")
+	}
+}
+
 // checkTraitDuration asserts that traits[traitName] contains an entry for traitValue with the expected duration.
 func checkTraitDuration(t *testing.T, traits map[string]TraitValueDurations, traitName, traitValue string, want time.Duration) {
 	t.Helper()
