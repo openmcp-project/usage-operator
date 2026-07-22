@@ -1,0 +1,250 @@
+package controller_test
+
+import (
+	"time"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	testutils "github.com/openmcp-project/controller-utils/pkg/testing"
+
+	openmcpconst "github.com/openmcp-project/openmcp-operator/api/constants"
+
+	usagev1alpha1 "github.com/openmcp-project/usage-operator/api/v1alpha1"
+	"github.com/openmcp-project/usage-operator/internal/shared"
+)
+
+// drainReconcileTrigger reads all pending events from the reconcile trigger channel and returns
+// the names of the queued objects in the form "namespace/name".
+func drainReconcileTrigger() []string {
+	var names []string
+	for {
+		select {
+		case e := <-resourceReconcileTrigger:
+			names = append(names, e.Object.GetNamespace()+"/"+e.Object.GetName())
+		default:
+			return names
+		}
+	}
+}
+
+var _ = Describe("Config Controller", Serial, func() {
+
+	BeforeEach(func() {
+		resetSharedInformation()
+	})
+
+	It("should set watches according to the config", func() {
+		env := defaultTestSetup("testdata", "config", "test-01")
+
+		req := testutils.RequestFromStrings("usage")
+		rr := env.ShouldReconcile(cfgRec, req)
+		Expect(rr.RequeueAfter).To(BeZero())
+
+		// verify shared information state
+		Expect(shared.SharedInformation().GetActiveInformers().UnsortedList()).To(ConsistOf(
+			secretGVK,
+			configMapGVK,
+		))
+		Expect(shared.SharedInformation().GetAllWatches()).To(HaveLen(2))
+		secretTracker := shared.SharedInformation().GetWatch(secretGVK)
+		Expect(secretTracker).ToNot(BeNil())
+		Expect(secretTracker.Config.GroupVersionKind).To(BeEquivalentTo(secretGVK))
+		Expect(secretTracker.Config.ResourceUsagePeriod).ToNot(BeNil())
+		Expect(secretTracker.Config.ResourceUsagePeriod.Duration).To(BeEquivalentTo(72 * time.Hour))
+		Expect(secretTracker.Config.TrackUntil).To(BeEquivalentTo(usagev1alpha1.TrackUntilDeletionTimestamp))
+		Expect(secretTracker.Config.Traits).To(HaveLen(2))
+		Expect(secretTracker.Config.Traits).To(HaveKeyWithValue("foo", usagev1alpha1.Trait{Path: ".namespace.metadata.labels.foo\\.bar\\.baz/foo"}))
+		Expect(secretTracker.Config.Traits).To(HaveKeyWithValue("bar", usagev1alpha1.Trait{Path: ".namespace.metadata.labels.foo\\.bar\\.baz/bar"}))
+		cmTracker := shared.SharedInformation().GetWatch(configMapGVK)
+		Expect(cmTracker).ToNot(BeNil())
+		Expect(cmTracker.Config.GroupVersionKind).To(BeEquivalentTo(configMapGVK))
+		Expect(cmTracker.Config.ResourceUsagePeriod).ToNot(BeNil())
+		Expect(cmTracker.Config.ResourceUsagePeriod.Duration).To(BeEquivalentTo(720 * time.Hour))
+		Expect(cmTracker.Config.TrackUntil).To(BeEquivalentTo(usagev1alpha1.TrackUntilDeletion))
+		Expect(cmTracker.Config.Traits).To(BeEmpty())
+
+		// first reconcile adds both watches as new informers — reconcile triggering is handled by the
+		// informer startup, so nothing is queued manually here
+		Expect(drainReconcileTrigger()).To(BeEmpty())
+
+		// now we add one entry to the config and remove another one to verify that the watches are updated accordingly
+		uscfg := &usagev1alpha1.UsageServiceConfig{}
+		uscfg.SetName(req.Name)
+		Expect(env.Client(platform).Get(env.Ctx, client.ObjectKeyFromObject(uscfg), uscfg)).To(Succeed())
+		// remove 'bar' trait from first entry
+		delete(uscfg.Spec.ResourcesToTrack[0].Traits, "bar")
+		// modify second entry to match deployments instead of configmaps
+		uscfg.Spec.ResourcesToTrack[1].Group = deploymentGVK.Group
+		uscfg.Spec.ResourcesToTrack[1].Version = deploymentGVK.Version
+		uscfg.Spec.ResourcesToTrack[1].Kind = deploymentGVK.Kind
+		Expect(env.Client(platform).Update(env.Ctx, uscfg)).To(Succeed())
+
+		// reconcile again
+		rr = env.ShouldReconcile(cfgRec, req)
+		Expect(rr.RequeueAfter).To(BeZero())
+
+		// verify updated shared information state
+		Expect(shared.SharedInformation().GetActiveInformers().UnsortedList()).To(ConsistOf(
+			secretGVK,
+			configMapGVK, // this is only removed when the config is reset
+			deploymentGVK,
+		))
+		Expect(shared.SharedInformation().GetAllWatches()).To(HaveLen(2))
+		secretTracker = shared.SharedInformation().GetWatch(secretGVK)
+		Expect(secretTracker).ToNot(BeNil())
+		Expect(secretTracker.Config.GroupVersionKind).To(BeEquivalentTo(secretGVK))
+		Expect(secretTracker.Config.Traits).To(HaveLen(1))
+		Expect(secretTracker.Config.Traits).To(HaveKeyWithValue("foo", usagev1alpha1.Trait{Path: ".namespace.metadata.labels.foo\\.bar\\.baz/foo"}))
+
+		deploymentTracker := shared.SharedInformation().GetWatch(deploymentGVK)
+		Expect(deploymentTracker).ToNot(BeNil())
+		Expect(deploymentTracker.Config.GroupVersionKind).To(BeEquivalentTo(deploymentGVK))
+		Expect(deploymentTracker.Config.Traits).To(BeEmpty())
+
+		cmTracker = shared.SharedInformation().GetWatch(configMapGVK)
+		Expect(cmTracker).To(BeNil())
+
+		// ConfigMap watch removed: existing ConfigMaps queued. Deployment watch added: no existing Deployments.
+		// Secret watch config changed: existing Secrets queued.
+		Expect(drainReconcileTrigger()).To(ConsistOf(
+			"test/secret-01", "test/secret-02",
+			"test/configmap-01", "test/configmap-02",
+		))
+
+		// re-add ConfigMap watch — its informer is already active, so existing ConfigMaps must be queued manually
+		Expect(env.Client(platform).Get(env.Ctx, client.ObjectKeyFromObject(uscfg), uscfg)).To(Succeed())
+		uscfg.Spec.ResourcesToTrack[1].Group = configMapGVK.Group
+		uscfg.Spec.ResourcesToTrack[1].Version = configMapGVK.Version
+		uscfg.Spec.ResourcesToTrack[1].Kind = configMapGVK.Kind
+		Expect(env.Client(platform).Update(env.Ctx, uscfg)).To(Succeed())
+
+		// reconcile again
+		rr = env.ShouldReconcile(cfgRec, req)
+		Expect(rr.RequeueAfter).To(BeZero())
+
+		Expect(shared.SharedInformation().GetAllWatches()).To(HaveLen(2))
+		cmTracker = shared.SharedInformation().GetWatch(configMapGVK)
+		Expect(cmTracker).ToNot(BeNil())
+
+		// ConfigMap informer was already active: existing ConfigMaps must be queued manually
+		// Deployment watch removed: existing Deployments queued (none exist)
+		// Secret watch unchanged: nothing queued
+		Expect(drainReconcileTrigger()).To(ConsistOf(
+			"test/configmap-01", "test/configmap-02",
+		))
+	})
+
+	It("should clear all watches if the config does not exist", func() {
+		env := defaultTestSetup("testdata", "config", "test-01")
+
+		req := testutils.RequestFromStrings("usage")
+		rr := env.ShouldReconcile(cfgRec, req)
+		Expect(rr.RequeueAfter).To(BeZero())
+
+		Expect(shared.SharedInformation().GetAllWatches()).To(HaveLen(2))
+		// drain events from the first reconcile
+		drainReconcileTrigger()
+
+		// delete the config
+		uscfg := &usagev1alpha1.UsageServiceConfig{}
+		uscfg.SetName(req.Name)
+		Expect(env.Client(platform).Delete(env.Ctx, uscfg)).To(Succeed())
+
+		// reconcile again
+		rr = env.ShouldReconcile(cfgRec, req)
+		Expect(rr.RequeueAfter).To(BeZero())
+
+		// verify that all watches have been cleared
+		Expect(shared.SharedInformation().GetAllWatches()).To(BeEmpty())
+
+		// both removed watches had existing resources — all should be queued for reconciliation
+		Expect(drainReconcileTrigger()).To(ConsistOf(
+			"test/secret-01", "test/secret-02",
+			"test/configmap-01", "test/configmap-02",
+		))
+	})
+
+	It("should clear all watches if the config is in deletion", func() {
+		env := defaultTestSetup("testdata", "config", "test-01")
+
+		req := testutils.RequestFromStrings("usage")
+		rr := env.ShouldReconcile(cfgRec, req)
+		Expect(rr.RequeueAfter).To(BeZero())
+
+		Expect(shared.SharedInformation().GetAllWatches()).To(HaveLen(2))
+		// drain events from the first reconcile
+		drainReconcileTrigger()
+
+		// add a finalizer to prevent immediate deletion
+		uscfg := &usagev1alpha1.UsageServiceConfig{}
+		uscfg.SetName(req.Name)
+		Expect(env.Client(platform).Get(env.Ctx, client.ObjectKeyFromObject(uscfg), uscfg)).To(Succeed())
+		uscfg.SetFinalizers([]string{"dummy"})
+		Expect(env.Client(platform).Update(env.Ctx, uscfg)).To(Succeed())
+
+		// delete the config (will be stuck in deletion due to the finalizer)
+		Expect(env.Client(platform).Delete(env.Ctx, uscfg)).To(Succeed())
+		Expect(env.Client(platform).Get(env.Ctx, client.ObjectKeyFromObject(uscfg), uscfg)).To(Succeed())
+		Expect(uscfg.DeletionTimestamp).ToNot(BeNil())
+
+		// reconcile again
+		rr = env.ShouldReconcile(cfgRec, req)
+		Expect(rr.RequeueAfter).To(BeZero())
+
+		// verify that all watches have been cleared
+		Expect(shared.SharedInformation().GetAllWatches()).To(BeEmpty())
+
+		// both removed watches had existing resources — all should be queued for reconciliation
+		Expect(drainReconcileTrigger()).To(ConsistOf(
+			"test/secret-01", "test/secret-02",
+			"test/configmap-01", "test/configmap-02",
+		))
+	})
+
+	It("should do nothing when the reconcile request is for a different provider name", func() {
+		env := defaultTestSetup("testdata", "config", "test-01")
+		env.ShouldReconcile(cfgRec, testutils.RequestFromStrings("usage"))
+		Expect(shared.SharedInformation().GetAllWatches()).To(HaveLen(2))
+		drainReconcileTrigger()
+
+		// reconcile with a different provider name — should be ignored
+		rr, err := env.Reconciler(cfgRec).Reconcile(env.Ctx, testutils.RequestFromStrings("other-provider"))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(rr.RequeueAfter).To(BeZero())
+
+		// watches must be unchanged
+		Expect(shared.SharedInformation().GetAllWatches()).To(HaveLen(2))
+		Expect(drainReconcileTrigger()).To(BeEmpty())
+	})
+
+	It("should do nothing when the config has the ignore operation annotation", func() {
+		env := defaultTestSetup("testdata", "config", "test-01")
+		env.ShouldReconcile(cfgRec, testutils.RequestFromStrings("usage"))
+		Expect(shared.SharedInformation().GetAllWatches()).To(HaveLen(2))
+		drainReconcileTrigger()
+
+		// set the ignore annotation
+		uscfg := &usagev1alpha1.UsageServiceConfig{}
+		uscfg.SetName("usage")
+		Expect(env.Client(platform).Get(env.Ctx, client.ObjectKeyFromObject(uscfg), uscfg)).To(Succeed())
+		annotations := uscfg.GetAnnotations()
+		if annotations == nil {
+			annotations = map[string]string{}
+		}
+		annotations[openmcpconst.OperationAnnotation] = openmcpconst.OperationAnnotationValueIgnore
+		uscfg.SetAnnotations(annotations)
+		Expect(env.Client(platform).Update(env.Ctx, uscfg)).To(Succeed())
+
+		rr, err := env.Reconciler(cfgRec).Reconcile(env.Ctx, testutils.RequestFromStrings("usage"))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(rr.RequeueAfter).To(BeZero())
+
+		// watches must be unchanged — the ignore annotation caused a no-op
+		Expect(shared.SharedInformation().GetAllWatches()).To(HaveLen(2))
+		Expect(drainReconcileTrigger()).To(BeEmpty())
+	})
+
+})

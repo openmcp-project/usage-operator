@@ -3,7 +3,9 @@
 
 ## Usage Operator
 
-- [MCPUsage Resource](usage-operator/mcpusage.md)
-- [Metering Operators](usage-operator/metering-operator.md)
+- [Configuration](usage-operator/config.md)
+- [Usage-Operator Internals](usage-operator/internals.md)
+- [Reporting Usage](usage-operator/reporting.md)
 - [Setup](usage-operator/setup.md)
+- [The ResourceUsage Resource](usage-operator/usage.md)
 

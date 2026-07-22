@@ -1,0 +1,37 @@
+# Resource was tracked for the entire tracking period (2h), with no gaps.
+# Traits: flavor=premium for the full 2h, project=foo for 1h then project=bar for 1h.
+apiVersion: usage.open-control-plane.io/v1alpha1
+kind: ResourceUsage
+metadata:
+  name: full-tracking
+spec:
+  resource:
+    group: core.open-control-plane.io
+    kind: ControlPlane
+    name: test
+    namespace: test-ns
+    version: v1
+  trackingPeriod:
+    start: "2026-07-01T10:00:00Z"
+    end: "2026-07-01T12:00:00Z"
+  usage:
+  - start: "2026-07-01T10:00:00Z"
+    end: "2026-07-01T12:00:00Z"
+  traits:
+    flavor:
+    - value: premium
+      usage:
+      - start: "2026-07-01T10:00:00Z"
+        end: "2026-07-01T12:00:00Z"
+    project:
+    - value: foo
+      usage:
+      - start: "2026-07-01T10:00:00Z"
+        end: "2026-07-01T11:00:00Z"
+    - value: bar
+      usage:
+      - start: "2026-07-01T11:00:00Z"
+        end: "2026-07-01T12:00:00Z"
+status:
+  phase: Completed
+  totalTrackedDuration: 2h0m0s

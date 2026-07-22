@@ -1,0 +1,16 @@
+# NamespaceRequired = true: no namespace selector, but a trait accesses .namespace
+apiVersion: usage.open-control-plane.io/v1alpha1
+kind: UsageServiceConfig
+metadata:
+  name: test-02
+spec:
+  resourcesToTrack:
+  - group: apps
+    version: v1
+    kind: Deployment
+    resourceUsagePeriod: 1h
+    traits:
+      nsPhase:
+        path: .namespace.status.phase
+      replicas:
+        path: .resource.spec.replicas

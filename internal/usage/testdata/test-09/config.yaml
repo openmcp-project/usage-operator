@@ -1,0 +1,14 @@
+# Track: trait value changed (replicas: 3 -> 5)
+apiVersion: usage.open-control-plane.io/v1alpha1
+kind: UsageServiceConfig
+metadata:
+  name: test-09
+spec:
+  resourcesToTrack:
+  - group: apps
+    version: v1
+    kind: Deployment
+    resourceUsagePeriod: 1h
+    traits:
+      replicas:
+        path: .resource.spec.replicas

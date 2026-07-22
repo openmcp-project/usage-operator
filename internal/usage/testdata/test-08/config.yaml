@@ -1,0 +1,14 @@
+# Track: new trait added (image), old trait removed (replicas)
+apiVersion: usage.open-control-plane.io/v1alpha1
+kind: UsageServiceConfig
+metadata:
+  name: test-08
+spec:
+  resourcesToTrack:
+  - group: apps
+    version: v1
+    kind: Deployment
+    resourceUsagePeriod: 1h
+    traits:
+      image:
+        path: .resource.spec.template.spec.containers[0].image

@@ -1,0 +1,23 @@
+apiVersion: usage.open-control-plane.io/v1alpha1
+kind: UsageServiceConfig
+metadata:
+  name: usage
+spec:
+  garbageCollection:
+    interval: 1h
+    keepDuration: 24h
+    keepCount: 2
+  resourcesToTrack:
+  - group: ""
+    version: v1
+    kind: Secret
+    resourceUsagePeriod: 72h
+    trackUntil: DeletionTimestamp
+    traits:
+      foo:
+        path: .namespace.metadata.labels.foo\.bar\.baz/foo
+      bar:
+        path: .namespace.metadata.labels.foo\.bar\.baz/bar
+  - group: ""
+    version: v1
+    kind: ConfigMap

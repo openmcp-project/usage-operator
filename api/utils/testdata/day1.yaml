@@ -1,0 +1,33 @@
+# First of two consecutive daily tracking records for the same resource.
+# Day 1: fully tracked for 24h. Traits: flavor=premium all day, project=alpha all day.
+apiVersion: usage.open-control-plane.io/v1alpha1
+kind: ResourceUsage
+metadata:
+  name: day1
+spec:
+  resource:
+    group: core.open-control-plane.io
+    kind: ControlPlane
+    name: multi
+    namespace: test-ns
+    version: v1
+  trackingPeriod:
+    start: "2026-07-01T00:00:00Z"
+    end: "2026-07-02T00:00:00Z"
+  usage:
+  - start: "2026-07-01T00:00:00Z"
+    end: "2026-07-02T00:00:00Z"
+  traits:
+    flavor:
+    - value: premium
+      usage:
+      - start: "2026-07-01T00:00:00Z"
+        end: "2026-07-02T00:00:00Z"
+    project:
+    - value: alpha
+      usage:
+      - start: "2026-07-01T00:00:00Z"
+        end: "2026-07-02T00:00:00Z"
+status:
+  phase: Completed
+  totalTrackedDuration: 24h0m0s
