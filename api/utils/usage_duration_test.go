@@ -501,6 +501,79 @@ func TestGetDurationForValue(t *testing.T) {
 	}
 }
 
+// --- TraitValueDurations.GetDominantTraitValue ---
+
+func TestGetDominantTraitValue(t *testing.T) {
+	premium := &TraitValueDuration{Value: jsonValue(t, "premium"), Duration: 3 * time.Hour}
+	standard := &TraitValueDuration{Value: jsonValue(t, "standard"), Duration: 1 * time.Hour}
+	null := &TraitValueDuration{Value: jsonValue(t, nil), Duration: 5 * time.Hour}
+
+	cases := []struct {
+		name        string
+		tvds        TraitValueDurations
+		includeNull bool
+		want        *TraitValueDuration
+	}{
+		{
+			name:        "returns entry with longest duration",
+			tvds:        TraitValueDurations{standard, premium},
+			includeNull: false,
+			want:        premium,
+		},
+		{
+			name:        "tie returns first entry",
+			tvds:        TraitValueDurations{standard, {Value: jsonValue(t, "basic"), Duration: 1 * time.Hour}},
+			includeNull: false,
+			want:        standard,
+		},
+		{
+			name:        "single entry is dominant",
+			tvds:        TraitValueDurations{standard},
+			includeNull: false,
+			want:        standard,
+		},
+		{
+			name:        "empty slice returns nil",
+			tvds:        TraitValueDurations{},
+			includeNull: false,
+			want:        nil,
+		},
+		{
+			name:        "nil slice returns nil",
+			tvds:        nil,
+			includeNull: false,
+			want:        nil,
+		},
+		{
+			name:        "null excluded when includeNull is false",
+			tvds:        TraitValueDurations{null, standard},
+			includeNull: false,
+			want:        standard,
+		},
+		{
+			name:        "null wins when includeNull is true",
+			tvds:        TraitValueDurations{null, premium},
+			includeNull: true,
+			want:        null,
+		},
+		{
+			name:        "all null with includeNull false returns nil",
+			tvds:        TraitValueDurations{null},
+			includeNull: false,
+			want:        nil,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := tc.tvds.GetDominantTraitValue(tc.includeNull)
+			if got != tc.want {
+				t.Errorf("got %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
 // checkTraitDuration asserts that traits[traitName] contains an entry for traitValue with the expected duration.
 func checkTraitDuration(t *testing.T, traits map[string]TraitValueDurations, traitName, traitValue string, want time.Duration) {
 	t.Helper()
