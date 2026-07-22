@@ -202,6 +202,11 @@ type TraitValueDuration struct {
 	Duration time.Duration `json:"duration"`
 }
 
+// ValueAs unmarshals the trait value's raw JSON into the given pointer target.
+func (tvd *TraitValueDuration) ValueAs(target any) error {
+	return json.Unmarshal(tvd.Value.Raw, target)
+}
+
 type TraitValueDurations []*TraitValueDuration
 
 // GetDurationForValue returns the duration for which the trait had the given value.
