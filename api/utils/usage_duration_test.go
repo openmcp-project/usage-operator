@@ -158,6 +158,16 @@ func TestComputeUsageDuration(t *testing.T) {
 			wantUsed:      "0",
 			wantRemainder: "2h",
 		},
+		{
+			// The open-ended usage interval (no end time) means the resource is still active.
+			// Querying up to 11:30 should count 1h30m of usage (10:00-11:30).
+			name:          "ongoing — open-ended usage interval counts up to query end",
+			fixtures:      []string{"ongoing.yaml"},
+			start:         "2026-07-01T10:00:00Z",
+			end:           "2026-07-01T11:30:00Z",
+			wantUsed:      "1h30m",
+			wantRemainder: "0",
+		},
 	}
 
 	for _, tc := range cases {
@@ -343,6 +353,28 @@ func TestComputeTraitUsageDuration(t *testing.T) {
 			wantUsed:      "2h",
 			wantRemainder: "0",
 		},
+		{
+			// flavor=standard started at 11:00 with no end; querying up to 11:30 should give 30m.
+			name:          "ongoing — open-ended trait interval counts up to query end",
+			fixtures:      []string{"ongoing.yaml"},
+			start:         "2026-07-01T10:00:00Z",
+			end:           "2026-07-01T11:30:00Z",
+			traitName:     "flavor",
+			traitValue:    "standard",
+			wantUsed:      "30m",
+			wantRemainder: "0",
+		},
+		{
+			// flavor=premium ran 10:00-11:00 (closed interval); still visible within the query window.
+			name:          "ongoing — closed trait interval still counted",
+			fixtures:      []string{"ongoing.yaml"},
+			start:         "2026-07-01T10:00:00Z",
+			end:           "2026-07-01T11:30:00Z",
+			traitName:     "flavor",
+			traitValue:    "premium",
+			wantUsed:      "1h",
+			wantRemainder: "0",
+		},
 	}
 
 	for _, tc := range cases {
@@ -466,6 +498,29 @@ func TestComputeUsageDurationWithTraits(t *testing.T) {
 			t.Errorf("used: got %v, want 2h30m", gotUsed)
 		}
 		checkTraitDuration(t, traits, "flavor", "premium", mustDuration(t, "2h30m"))
+	})
+
+	t.Run("ongoing — open-ended usage and trait intervals counted up to query end", func(t *testing.T) {
+		// ongoing.yaml: usage started at 10:00 (no end), flavor=standard from 11:00 (no end),
+		// flavor=premium 10:00-11:00, project=alpha from 10:00 (no end).
+		// Query 10:00-11:30: resource active for 1h30m, standard for 30m, premium for 1h, alpha for 1h30m.
+		u := loadUsage(t, "ongoing.yaml")
+		start := mustParse(t, "2026-07-01T10:00:00Z")
+		end := mustParse(t, "2026-07-01T11:30:00Z")
+
+		gotUsed, gotRemainder, traits, err := ComputeUsageDurationWithTraits(start, end, u)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if gotUsed != mustDuration(t, "1h30m") {
+			t.Errorf("used: got %v, want 1h30m", gotUsed)
+		}
+		if gotRemainder != 0 {
+			t.Errorf("remainder: got %v, want 0", gotRemainder)
+		}
+		checkTraitDuration(t, traits, "flavor", "standard", 30*time.Minute)
+		checkTraitDuration(t, traits, "flavor", "premium", 1*time.Hour)
+		checkTraitDuration(t, traits, "project", "alpha", mustDuration(t, "1h30m"))
 	})
 }
 

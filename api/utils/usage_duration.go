@@ -59,11 +59,15 @@ func ComputeUsageDuration(start, end time.Time, usages ...*v1alpha1.ResourceUsag
 		coveredByTracking += clippedTPEnd.Sub(clippedTPStart)
 
 		for _, ts := range u.Spec.Usage {
-			if ts.Start.IsZero() || ts.End.IsZero() {
+			if ts.Start.IsZero() {
 				continue
 			}
+			tsEnd := end
+			if !ts.End.IsZero() {
+				tsEnd = ts.End.Time
+			}
 			s := maxTime(ts.Start.Time, start)
-			e := minTime(ts.End.Time, end)
+			e := minTime(tsEnd, end)
 			if s.Before(e) {
 				intervals = append(intervals, interval{s, e})
 			}
@@ -121,11 +125,15 @@ func ComputeTraitUsageDuration(start, end time.Time, traitName string, traitValu
 				continue
 			}
 			for _, ts := range tu.Usage {
-				if ts.Start.IsZero() || ts.End.IsZero() {
+				if ts.Start.IsZero() {
 					continue
 				}
+				tsEnd := end
+				if !ts.End.IsZero() {
+					tsEnd = ts.End.Time
+				}
 				s := maxTime(ts.Start.Time, start)
-				e := minTime(ts.End.Time, end)
+				e := minTime(tsEnd, end)
 				if s.Before(e) {
 					matchIntervals = append(matchIntervals, interval{s, e})
 				}
@@ -167,11 +175,15 @@ func ComputeUsageDurationWithTraits(start, end time.Time, usages ...*v1alpha1.Re
 			for _, tu := range traitUsages {
 				key := string(tu.Value.Raw)
 				for _, ts := range tu.Usage {
-					if ts.Start.IsZero() || ts.End.IsZero() {
+					if ts.Start.IsZero() {
 						continue
 					}
+					tsEnd := end
+					if !ts.End.IsZero() {
+						tsEnd = ts.End.Time
+					}
 					s := maxTime(ts.Start.Time, start)
-					e := minTime(ts.End.Time, end)
+					e := minTime(tsEnd, end)
 					if s.Before(e) {
 						traitIntervals[traitName][key] = append(traitIntervals[traitName][key], interval{s, e})
 					}
