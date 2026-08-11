@@ -1,0 +1,13 @@
+apiVersion: usage.open-control-plane.io/v1alpha1
+kind: UsageServiceConfig
+metadata:
+  name: usage
+spec:
+  resourcesToTrack:
+  - group: ""
+    version: v1
+    kind: Secret
+    selector:
+      namespace:
+        names:
+        - test

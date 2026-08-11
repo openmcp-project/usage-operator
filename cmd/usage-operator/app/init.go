@@ -6,9 +6,7 @@ import (
 
 	crdutil "github.com/openmcp-project/controller-utils/pkg/crds"
 	apiconst "github.com/openmcp-project/openmcp-operator/api/constants"
-	"github.com/openmcp-project/openmcp-operator/api/install"
 	"github.com/spf13/cobra"
-	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/openmcp-project/usage-operator/api/crds"
 	"github.com/openmcp-project/usage-operator/internal/helper"
@@ -61,16 +59,13 @@ func (o *InitOptions) Run(ctx context.Context) error {
 	// apply CRDs
 	crdManager := crdutil.NewCRDManager(apiconst.ClusterLabel, crds.CRDs)
 
-	cluster, err := helper.GetOnboardingCluster(ctx, log, o.PlatformCluster.Client())
+	onboardingCluster, err := helper.GetOnboardingCluster(ctx, log, o.PlatformCluster.Client(), o.ProviderName)
 	if err != nil {
 		return fmt.Errorf("error when getting onboarding cluster: %w", err)
 	}
 
-	if err := cluster.InitializeClient(install.InstallCRDAPIs(runtime.NewScheme())); err != nil {
-		return fmt.Errorf("error initializing client: %w", err)
-	}
-
-	crdManager.AddCRDLabelToClusterMapping("onboarding", cluster)
+	crdManager.AddCRDLabelToClusterMapping("platform", o.PlatformCluster)
+	crdManager.AddCRDLabelToClusterMapping("onboarding", onboardingCluster)
 
 	if err := crdManager.CreateOrUpdateCRDs(ctx, &log); err != nil {
 		return fmt.Errorf("error creating/updating CRDs: %w", err)

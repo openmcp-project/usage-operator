@@ -1,0 +1,14 @@
+# MatchesSelector: namespace names selector with empty list — matches nothing
+apiVersion: usage.open-control-plane.io/v1alpha1
+kind: UsageServiceConfig
+metadata:
+  name: test-11
+spec:
+  resourcesToTrack:
+  - group: apps
+    version: v1
+    kind: Deployment
+    resourceUsagePeriod: 1h
+    selector:
+      namespace:
+        names: []

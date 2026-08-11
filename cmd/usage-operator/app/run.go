@@ -7,43 +7,22 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/cobra"
-	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/certwatcher"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/yaml"
 
 	"github.com/openmcp-project/controller-utils/pkg/logging"
-	corev1alpha1 "github.com/openmcp-project/mcp-operator/api/core/v1alpha1"
-	pwcorev1alpha1 "github.com/openmcp-project/project-workspace-operator/api/core/v1alpha1"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-
-	usagev1 "github.com/openmcp-project/usage-operator/api/usage/v1"
 
 	"github.com/openmcp-project/usage-operator/internal/controller"
 	"github.com/openmcp-project/usage-operator/internal/helper"
-	"github.com/openmcp-project/usage-operator/internal/runnable"
-	"github.com/openmcp-project/usage-operator/internal/usage"
 )
 
 var setupLog logging.Logger
-
-var (
-	scheme = runtime.NewScheme()
-)
-
-func init() {
-	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-
-	utilruntime.Must(corev1alpha1.AddToScheme(scheme))
-	utilruntime.Must(pwcorev1alpha1.AddToScheme(scheme))
-	utilruntime.Must(usagev1.AddToScheme(scheme))
-	// +kubebuilder:scaffold:scheme
-}
 
 func NewRunCommand(so *SharedOptions) *cobra.Command {
 	opts := &RunOptions{
@@ -242,17 +221,17 @@ func (o *RunOptions) Run(ctx context.Context) error {
 	setupLog = o.Log.WithName("setup")
 	setupLog.Info("Environment", "value", o.Environment)
 
-	cluster, err := helper.GetOnboardingCluster(ctx, setupLog, o.PlatformCluster.Client())
+	onboardingCluster, err := helper.GetOnboardingCluster(ctx, setupLog, o.PlatformCluster.Client(), o.ProviderName)
 	if err != nil {
-		return fmt.Errorf("error when getting onboarding cluster: %w", err)
+		return fmt.Errorf("error getting onboarding cluster: %w", err)
 	}
 
 	webhookServer := webhook.NewServer(webhook.Options{
 		TLSOpts: o.WebhookTLSOpts,
 	})
 
-	mgr, err := ctrl.NewManager(cluster.RESTConfig(), ctrl.Options{
-		Scheme:                 scheme,
+	mgr, err := ctrl.NewManager(o.PlatformCluster.RESTConfig(), ctrl.Options{
+		Scheme:                 o.PlatformCluster.Scheme(),
 		Metrics:                o.MetricsServerOptions,
 		WebhookServer:          webhookServer,
 		HealthProbeBindAddress: o.ProbeAddr,
@@ -274,24 +253,33 @@ func (o *RunOptions) Run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("unable to create manager: %w", err)
 	}
-
-	usageTracker, err := usage.NewUsageTracker(mgr.GetClient())
-	if err != nil {
-		return fmt.Errorf("unable to create usage tracker: %w", err)
+	if err := mgr.Add(onboardingCluster.Cluster()); err != nil { // since we have controllers watching the onboarding cluster, we need to start its cache
+		return fmt.Errorf("unable to add onboarding cluster cache to manager: %w", err)
 	}
 
-	runnable := runnable.NewUsageRunnable(mgr.GetClient(), usageTracker)
-	if err := mgr.Add(&runnable); err != nil {
-		return fmt.Errorf("unable to add usage runnable: %w", err)
+	// add controllers to manager
+	configCtrl := controller.NewConfigController(o.PlatformCluster, onboardingCluster, o.ProviderName, nil)
+	if err := configCtrl.SetupWithManager(mgr); err != nil {
+		return fmt.Errorf("error setting up config controller with manager: %w", err)
+	}
+	resourceCtrl := controller.NewTrackedResourceController(onboardingCluster)
+	if err := resourceCtrl.SetupWithManager(mgr); err != nil {
+		return fmt.Errorf("error setting up resource controller with manager: %w", err)
+	}
+	namespaceCtrl := controller.NewNamespaceController(onboardingCluster)
+	if err := namespaceCtrl.SetupWithManager(mgr); err != nil {
+		return fmt.Errorf("error setting up namespace controller with manager: %w", err)
+	}
+	gc := controller.NewGarbageCollector(onboardingCluster)
+	if err := mgr.Add(gc); err != nil { // garbage collector implements the Runnable interface, so it can be started by the manager
+		return fmt.Errorf("unable to add garbage collector to manager: %w", err)
+	}
+	// This part is meant to ensure that ResourceUsage objects belonging to resources which are not tracked anymore will eventually be completed.
+	// It achieves this by manually triggering a reconciliation for all resources which have corresponding non-completed ResourceUsage objects on startup.
+	if err := mgr.Add(manager.RunnableFunc(resourceCtrl.StartupReconciliation)); err != nil {
+		return fmt.Errorf("unable to add startup reconciliation to manager: %w", err)
 	}
 
-	if err := (&controller.ManagedControlPlaneReconciler{
-		Client:       mgr.GetClient(),
-		Scheme:       mgr.GetScheme(),
-		UsageTracker: usageTracker,
-	}).SetupWithManager(mgr); err != nil {
-		return fmt.Errorf("unable to create controller ManagedControlPlane: %w", err)
-	}
 	// +kubebuilder:scaffold:builder
 
 	if o.MetricsCertWatcher != nil {

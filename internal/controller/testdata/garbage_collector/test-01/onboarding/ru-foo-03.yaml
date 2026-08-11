@@ -1,0 +1,17 @@
+apiVersion: usage.open-control-plane.io/v1alpha1
+kind: ResourceUsage
+metadata:
+  name: ru-foo-03
+spec:
+  resource:
+    group: ""
+    kind: Secret
+    name: foo
+    namespace: test
+    version: v1
+  trackingPeriod:
+    end: "2026-01-04T00:00:00Z"
+    start: "2026-01-03T00:00:00Z"
+  usage: []
+status:
+  phase: Completed

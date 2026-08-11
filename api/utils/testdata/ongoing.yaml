@@ -1,0 +1,35 @@
+# Ongoing ResourceUsage: the resource has been tracked since 10:00, is still active (no end on usage),
+# and the tracking period ends at 12:00 (in the future relative to the test query).
+# Traits: flavor switched from premium to standard at 11:00; standard is the current value (no end).
+# project=alpha for the entire period so far (no end).
+apiVersion: usage.open-control-plane.io/v1alpha1
+kind: ResourceUsage
+metadata:
+  name: ongoing
+spec:
+  resource:
+    group: core.open-control-plane.io
+    kind: ControlPlane
+    name: test
+    namespace: test-ns
+    version: v1
+  trackingPeriod:
+    start: "2026-07-01T10:00:00Z"
+    end: "2026-07-01T12:00:00Z"
+  usage:
+  - start: "2026-07-01T10:00:00Z"
+  traits:
+    flavor:
+    - value: standard
+      usage:
+      - start: "2026-07-01T11:00:00Z"
+    - value: premium
+      usage:
+      - start: "2026-07-01T10:00:00Z"
+        end: "2026-07-01T11:00:00Z"
+    project:
+    - value: alpha
+      usage:
+      - start: "2026-07-01T10:00:00Z"
+status:
+  phase: Ongoing

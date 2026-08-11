@@ -1,0 +1,192 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.20.1
+  labels:
+    openmcp.cloud/cluster: onboarding
+  name: resourceusages.usage.open-control-plane.io
+spec:
+  group: usage.open-control-plane.io
+  names:
+    kind: ResourceUsage
+    listKind: ResourceUsageList
+    plural: resourceusages
+    shortNames:
+    - usage
+    - ru
+    singular: resourceusage
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.resource.kind
+      name: kind
+      type: string
+    - jsonPath: .spec.resource.version
+      name: version
+      priority: 10
+      type: string
+    - jsonPath: .spec.resource.group
+      name: group
+      priority: 10
+      type: string
+    - jsonPath: .spec.resource.name
+      name: name
+      type: string
+    - jsonPath: .spec.resource.namespace
+      name: namespace
+      type: string
+    - jsonPath: .spec.trackingPeriod.start
+      name: start
+      type: date
+    - jsonPath: .spec.trackingPeriod.end
+      name: end
+      type: date
+    - jsonPath: .status.phase
+      name: phase
+      type: string
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              resource:
+                description: Resource specifies the resource for which usage is being
+                  tracked.
+                properties:
+                  group:
+                    type: string
+                  kind:
+                    type: string
+                  name:
+                    description: Name is the name of the object.
+                    type: string
+                  namespace:
+                    description: Namespace is the namespace of the object.
+                    type: string
+                  version:
+                    type: string
+                required:
+                - group
+                - kind
+                - name
+                - namespace
+                - version
+                type: object
+              trackingPeriod:
+                description: |-
+                  TrackingPeriod specifies the time frame for which this usage record is tracking usage.
+                  The start time is inclusive, while the end time is exclusive.
+                  The duration should be a multiple of 24 hours.
+                properties:
+                  end:
+                    description: End specifies the end of the time period.
+                    format: date-time
+                    type: string
+                  start:
+                    description: Start specifies the beginning of the time period.
+                    format: date-time
+                    type: string
+                type: object
+              traits:
+                additionalProperties:
+                  items:
+                    properties:
+                      usage:
+                        description: |-
+                          Usage specifies the time periods for which the trait had this value.
+                          This can be expected to be sorted so that the latest - possibly ongoing - tracking period is first.
+                        items:
+                          properties:
+                            end:
+                              description: End specifies the end of the time period.
+                              format: date-time
+                              type: string
+                            start:
+                              description: Start specifies the beginning of the time
+                                period.
+                              format: date-time
+                              type: string
+                          type: object
+                        type: array
+                      value:
+                        description: Value is the value of the trait at the time of
+                          usage.
+                        nullable: true
+                        x-kubernetes-preserve-unknown-fields: true
+                    required:
+                    - value
+                    type: object
+                  type: array
+                description: Traits maps each trait identifier to all values the trait's
+                  field has had during the tracking period, along with the duration
+                  for which each value was present.
+                type: object
+              usage:
+                description: |-
+                  Usage is a list of time periods for which the referenced resource was actually tracked.
+                  In most cases, this will just be a single entry spanning the whole TrackingPeriod, but if the resource
+                  is deleted (and potentially recreated) or modified to (not) match a selector during the tracking period, there may be multiple entries.
+                  This can be expected to be sorted so that the latest - possibly ongoing - tracking period is first.
+                items:
+                  properties:
+                    end:
+                      description: End specifies the end of the time period.
+                      format: date-time
+                      type: string
+                    start:
+                      description: Start specifies the beginning of the time period.
+                      format: date-time
+                      type: string
+                  type: object
+                type: array
+            required:
+            - resource
+            type: object
+          status:
+            properties:
+              phase:
+                description: |-
+                  Phase specifies whether this usage record is still being tracked or if it has been completed.
+                  Must be either 'Ongoing' or 'Completed'.
+                enum:
+                - Ongoing
+                - Completed
+                type: string
+              totalTrackedDuration:
+                description: |-
+                  TotalTrackedDuration specifies the total duration for which the resource was actually tracked during the tracking period.
+                  This is the sum of the durations of all entries in Usage.
+                type: string
+            type: object
+        type: object
+    selectableFields:
+    - jsonPath: .spec.resource.kind
+    - jsonPath: .spec.resource.version
+    - jsonPath: .spec.resource.group
+    - jsonPath: .spec.resource.name
+    - jsonPath: .spec.resource.namespace
+    - jsonPath: .status.phase
+    served: true
+    storage: true
+    subresources:
+      status: {}

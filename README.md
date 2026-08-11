@@ -4,75 +4,12 @@
 
 ## About this project
 
-The usage operator is used to capture usage of your customers using the MCP platform. It can be used in conjunction with a custom metering operator dedicated for your use case.
-
-This operator can be used in conjunction with a metering-operator to charge your customers using your openMCP platform.
-The operator exposes a Usage Resource which has aggregated usage stats about every MCP.
+This operator can be used in conjunction with a metering operator to charge your customers using your openMCP platform.
+The operator can be configured to track existence and traits for arbitrary resources, and it then exposes this information via `ResourceUsage` resources.
 
 ## Requirements and Setup
 
-### Prerequisites
-
-- go version v1.24.0+
-- docker version 17.03+.
-- kubectl version v1.11.3+.
-- Access to a Kubernetes v1.11.3+ cluster.
-
-### To Deploy on the cluster
-
-**Build and push your image to the location specified by `IMG`:**
-
-```sh
-make docker-build docker-push IMG=<some-registry>/usage-operator:tag
-```
-
-**NOTE:** This image ought to be published in the personal registry you specified.
-And it is required to have access to pull the image from the working environment.
-Make sure you have the proper permission to the registry if the above commands don’t work.
-
-**Install the CRDs into the cluster:**
-
-```sh
-make install
-```
-
-**Deploy the Manager to the cluster with the image specified by `IMG`:**
-
-```sh
-make deploy IMG=<some-registry>/usage-operator:tag
-```
-
-> **NOTE**: If you encounter RBAC errors, you may need to grant yourself cluster-admin
-privileges or be logged in as admin.
-
-**Create instances of your solution**
-You can apply the samples (examples) from the config/sample:
-
-```sh
-kubectl apply -k config/samples/
-```
-
->**NOTE**: Ensure that the samples has default values to test it out.
-
-### To Uninstall
-
-**Delete the instances (CRs) from the cluster:**
-
-```sh
-kubectl delete -k config/samples/
-```
-
-**Delete the APIs(CRDs) from the cluster:**
-
-```sh
-make uninstall
-```
-
-**UnDeploy the controller from the cluster:**
-
-```sh
-make undeploy
-```
+The usage-operator is designed as an openmcp platform service and should be deployed via its `PlatformService` manifest. `task platformservice` can be used to generate a manifest based on the currently checked-out version.
 
 ## Support, Feedback, Contributing
 
