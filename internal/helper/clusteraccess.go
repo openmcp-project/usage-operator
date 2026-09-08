@@ -41,12 +41,12 @@ func GetOnboardingCluster(ctx context.Context, log logging.Logger, client client
 					{
 						APIGroups: []string{"*"},
 						Resources: []string{"*"},
-						Verbs:     []string{"get", "list", "watch"},
+						Verbs:     []string{"get", "list", "watch"}, //nolint:goconst
 					},
 					{
 						APIGroups: []string{""},
 						Resources: []string{"namespaces"},
-						Verbs:     []string{"get", "list", "watch"},
+						Verbs:     []string{"get", "list", "watch"}, //nolint:goconst
 					},
 					{
 						APIGroups:     []string{"apiextensions.k8s.io"},
