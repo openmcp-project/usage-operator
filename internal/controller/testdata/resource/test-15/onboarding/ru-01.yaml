@@ -1,0 +1,23 @@
+apiVersion: usage.open-control-plane.io/v1alpha1
+kind: ResourceUsage
+metadata:
+  name: secret-abcde-00001
+spec:
+  resource:
+    group: ""
+    version: v1
+    kind: Secret
+    name: secret-01
+    namespace: test
+  trackingPeriod:
+    start: "2026-01-01T00:00:00Z"
+    end: "9999-12-31T00:00:00Z"
+  usage:
+  - start: "2026-01-01T00:00:00Z"
+  traits:
+    tier:
+    - value: "standard"
+      usage:
+      - start: "2026-01-01T00:00:00Z"
+status:
+  phase: Ongoing
