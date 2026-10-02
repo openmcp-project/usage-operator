@@ -295,6 +295,22 @@ var _ = Describe("Tracked Resource Controller", Serial, func() {
 		triggered := drainReconcileTrigger()
 		Expect(triggered).To(ConsistOf("test/secret-01", "test/secret-02"))
 	})
+
+	It("should not fail when a resource and its namespace have been deleted", func() {
+		env := defaultTestSetup("testdata", "resource", "test-15")
+		env.ShouldReconcile(cfgRec, testutils.RequestFromStrings(providerName))
+		rc := newResourceController(env)
+
+		_, err := rc.Reconcile(env.Ctx, secretRequest("secret-01", "test"))
+		Expect(err).NotTo(HaveOccurred())
+
+		rul := listRUs(env)
+		Expect(rul.Items).To(HaveLen(1))
+		ru := rul.Items[0]
+		// StopTracking closes the usage entry but does not complete the RU
+		Expect(ru.Spec.Usage[0].End).NotTo(BeNil())
+		Expect(ru.Status.Phase).To(Equal(usagev1alpha1.UsagePhaseOngoing))
+	})
 })
 
 var _ = Describe("RequeueAtTrackingPeriodEnd", func() {

@@ -95,7 +95,14 @@ func (c *TrackedResourceController) reconcile(ctx context.Context, req TypedRequ
 		if ut.NamespaceRequired() {
 			ns = &corev1.Namespace{}
 			if err := c.OnboardingCluster.Client().Get(ctx, types.NamespacedName{Name: req.Namespace}, ns); err != nil {
-				return reconcile.Result{}, fmt.Errorf("error fetching namespace %s for resource %s (%s): %w", req.Namespace, req.NamespacedName.String(), req.GroupVersionKind.String(), err)
+				if !apierrors.IsNotFound(err) {
+					return reconcile.Result{}, fmt.Errorf("error fetching namespace %s for resource %s (%s): %w", req.Namespace, req.NamespacedName.String(), req.GroupVersionKind.String(), err)
+				}
+				ns = nil // namespace was deleted
+				log.Debug("Namespace was deleted")
+				if obj != nil {
+					return reconcile.Result{}, fmt.Errorf("inconsistent cluster state: namespace %s for resource %s (%s) was deleted, but the resource still exists, this should not happen", req.Namespace, req.NamespacedName.String(), req.GroupVersionKind.String())
+				}
 			}
 		}
 
