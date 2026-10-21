@@ -150,6 +150,10 @@ func init() {
 	RegisterToSchemeBuilder(&UsageServiceConfig{}, &UsageServiceConfigList{})
 }
 
+func (gcc *GarbageCollectionConfig) IsEnabled() bool {
+	return gcc != nil && (gcc.KeepCount > 0 || gcc.KeepDuration != nil)
+}
+
 func (gcc *GarbageCollectionConfig) GetInterval() time.Duration {
 	if gcc != nil && gcc.Interval != nil {
 		return gcc.Interval.Duration
