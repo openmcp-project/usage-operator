@@ -11,6 +11,7 @@ import (
 
 	"github.com/openmcp-project/controller-utils/pkg/clusters"
 	"github.com/openmcp-project/controller-utils/pkg/logging"
+	"github.com/openmcp-project/controller-utils/pkg/periodic"
 
 	usagev1alpha1 "github.com/openmcp-project/usage-operator/api/v1alpha1"
 	"github.com/openmcp-project/usage-operator/internal/shared"
@@ -20,87 +21,34 @@ const (
 	GarbageCollectorName = "GarbageCollector"
 )
 
-// GarbageCollector runs periodically and checks for ResourceUsage objects that should be deleted according to the configured garbage collection policy.
-type GarbageCollector struct {
-	OnboardingCluster *clusters.Cluster
-	interval          time.Duration
-	trigger           chan struct{}
-	lastRun           time.Time
-	ticker            *time.Ticker
-}
-
-func NewGarbageCollector(onboardingCluster *clusters.Cluster) *GarbageCollector {
-	return &GarbageCollector{
-		OnboardingCluster: onboardingCluster,
-		interval:          usagev1alpha1.DefaultGarbageCollectionInterval,
-		trigger:           make(chan struct{}, 5),               // buffered channel to avoid blocking if multiple triggers are sent in quick succession
-		ticker:            time.NewTicker(365 * 24 * time.Hour), // initial ticker, will be reset to the configured interval on first run
-	}
-}
-
-func (c *GarbageCollector) setNextRun(log logging.Logger, maybeInterval ...time.Duration) {
-	interval := c.interval
-	if len(maybeInterval) > 0 {
-		interval = maybeInterval[0]
-	}
-	c.ticker.Reset(interval)
-	log.Debug("Scheduling next garbage collection run", "time", time.Now().Add(interval).Format(time.RFC3339))
-}
-
-func (c *GarbageCollector) getConfig() *usagev1alpha1.GarbageCollectionConfig {
-	cfg := shared.SharedInformation().GetGarbageCollectionConfig()
-	c.interval = cfg.GetInterval()
-	return cfg
-}
-
-// GetTrigger returns the channel that triggers the garbage collector to check for a new configuration, potentially triggering a garbage collection run.
-// Mainly exposed for testing purposes, should not required to be called in production code, as the garbage collector will inject this into the shared information on startup.
-func (c *GarbageCollector) GetTrigger() chan struct{} {
-	return c.trigger
-}
-
-// Start makes the GarbageCollector implement the Runnable interface, so it can be started by the controller-runtime manager.
-func (c *GarbageCollector) Start(ctx context.Context) error {
-	// controller-runtime does not inject a logger here, since this is not a controller, so we need to create one ourselves
-	log, err := logging.GetLogger()
-	if err != nil {
-		return fmt.Errorf("unable to create or get logger: %w", err)
-	}
-	log = log.WithName(GarbageCollectorName)
-	ctx = logging.NewContext(ctx, log)
-	log.Info("Starting GarbageCollector runnable")
-
-	runImmediately := shared.SharedInformation().SetGarbageCollectionTrigger(c.trigger)
-	if runImmediately {
-		// run garbage collection immediately if the trigger was used before the channel was set up
-		// this will also adjust the interval
-		c.CollectGarbage(ctx, time.Now())
-		c.setNextRun(log)
-	}
-
-	defer c.ticker.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return nil
-		case <-c.ticker.C:
-			c.CollectGarbage(ctx, time.Now())
-			c.setNextRun(log)
-		case <-c.trigger:
-			// this happens when the configuration was (re-)loaded, potentially changing the garbage collection configuration
-			// compute when the next GarbageCollection run should happen, based on the configured interval and the last run time
-			_ = c.getConfig() // update interval based on the current configuration
-			// due to the zero time being very long ago, this will always trigger a garbage collection run on the first trigger
-			nextRun := c.lastRun.Add(c.interval)
-			if !nextRun.After(time.Now()) {
-				// if the next run is in the past (or now), run garbage collection immediately
-				c.CollectGarbage(ctx, time.Now())
-				c.setNextRun(log)
-			} else {
-				// compute the duration until the next run and reset the ticker accordingly
-				c.setNextRun(log, time.Until(nextRun))
+func NewGarbageCollector(onboardingCluster *clusters.Cluster) (periodic.Periodic[*usagev1alpha1.GarbageCollectionConfig], error) {
+	p, err := periodic.NewPeriodicBuilder(generateGarbageCollectionFunction(onboardingCluster)).
+		WithName(GarbageCollectorName).
+		WithInterval(5 * time.Second). // initial interval, will be updated on the first run
+		WithConfigFuncs(func(ctx context.Context, cfg *usagev1alpha1.GarbageCollectionConfig) (*usagev1alpha1.GarbageCollectionConfig, error) {
+			if !shared.SharedInformation().IsInitialized() {
+				// returning an error while the config is not available causes the garbage collection to be aborted
+				// the small initial interval configured above causes frequent retries until the config is available
+				return nil, fmt.Errorf("waiting for the garbage collection config to be loaded")
 			}
+			return shared.SharedInformation().GetGarbageCollectionConfig(), nil
+		}).
+		Build()
+	if err != nil {
+		return nil, err
+	}
+	shared.SharedInformation().SetGarbageCollectionTrigger(p.GetTrigger())
+	return p, nil
+}
+
+func generateGarbageCollectionFunction(onboardingCluster *clusters.Cluster) periodic.RunLogicFunc[*usagev1alpha1.GarbageCollectionConfig] {
+	return func(ctx context.Context, p periodic.Periodic[*usagev1alpha1.GarbageCollectionConfig], gcc *usagev1alpha1.GarbageCollectionConfig) {
+		log := p.Log()
+		CollectGarbage(ctx, gcc, onboardingCluster, log, time.Now())
+		oldInterval := p.GetInterval()
+		newInterval := shared.SharedInformation().GetGarbageCollectionConfig().GetInterval()
+		if oldInterval != newInterval {
+			p.SetInterval(newInterval)
 		}
 	}
 }
@@ -109,22 +57,16 @@ func (c *GarbageCollector) Start(ctx context.Context) error {
 // It checks for ResourceUsage objects which are completed and obsolete (according to the garbage collection config) and deletes them.
 // Errors are simply logged, as the garbage collection will be retried on the next run.
 // The 'now' argument is mainly for testing, it should always be set to time.Now() in production code.
-func (c *GarbageCollector) CollectGarbage(ctx context.Context, now time.Time) {
-	log := logging.FromContextOrPanic(ctx)
-
-	// get current garbage collection configuration
-	gcc := c.getConfig()
+func CollectGarbage(ctx context.Context, gcc *usagev1alpha1.GarbageCollectionConfig, onboardingCluster *clusters.Cluster, log logging.Logger, now time.Time) {
 	if gcc == nil || gcc.KeepCount == 0 && gcc.KeepDuration == nil {
 		log.Info("No garbage collection configured, skipping garbage collection")
 		return
 	}
-
 	log.Info("Starting garbage collection")
-	c.lastRun = now
 
 	// list all completed ResourceUsage objects
 	rus := &usagev1alpha1.ResourceUsageList{}
-	if err := c.OnboardingCluster.Client().List(ctx, rus, client.MatchingFields{"status.phase": "Completed"}); err != nil {
+	if err := onboardingCluster.Client().List(ctx, rus, client.MatchingFields{"status.phase": "Completed"}); err != nil {
 		log.Error(err, "Error listing ResourceUsage objects")
 		return
 	}
@@ -184,7 +126,7 @@ func (c *GarbageCollector) CollectGarbage(ctx context.Context, now time.Time) {
 	failCount := 0
 	for name := range toDelete {
 		if ru, ok := mapped[name]; ok {
-			if err := c.OnboardingCluster.Client().Delete(ctx, ru); err != nil {
+			if err := onboardingCluster.Client().Delete(ctx, ru); err != nil {
 				log.Error(err, "Error deleting ResourceUsage", "name", ru.Name, "group", ru.Spec.Resource.Group, "version", ru.Spec.Resource.Version, "kind", ru.Spec.Resource.Kind, "resource", ru.Spec.Resource.NamespacedName().String())
 				failCount++
 			} else {
