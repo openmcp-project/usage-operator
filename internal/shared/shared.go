@@ -10,9 +10,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 
-	"github.com/openmcp-project/usage-operator/internal/usage"
+	"github.com/openmcp-project/controller-utils/pkg/periodic"
 
 	usagev1alpha1 "github.com/openmcp-project/usage-operator/api/v1alpha1"
+	"github.com/openmcp-project/usage-operator/internal/usage"
 )
 
 var sharedInstance *sharedInformation
@@ -20,14 +21,14 @@ var sharedInstance *sharedInformation
 // sharedInformation contains information which is shared between multiple controllers.
 // All access to it should happen via its methods, which need to be thread-safe.
 type sharedInformation struct {
-	lock                     *sync.RWMutex
-	watchedResources         map[schema.GroupVersionKind]*usage.UsageTracker
-	activeInformers          sets.Set[schema.GroupVersionKind] // needs to be tracked separate from watchedResources, as informers cannot be stopped once started
-	startInformer            func(gvk schema.GroupVersionKind) error
-	reconcileTrigger         chan event.TypedGenericEvent[*unstructured.Unstructured]
-	garbageCollectionConfig  *usagev1alpha1.GarbageCollectionConfig
-	garbageCollectionTrigger chan<- bool // informs the garbage collector about a changed garbage collection configuration, also triggering a garbage collection run
-	initialized              bool        // will be true if the config controller has reconciled at least once since the last restart of the operator
+	lock                    *sync.RWMutex
+	watchedResources        map[schema.GroupVersionKind]*usage.UsageTracker
+	activeInformers         sets.Set[schema.GroupVersionKind] // needs to be tracked separate from watchedResources, as informers cannot be stopped once started
+	startInformer           func(gvk schema.GroupVersionKind) error
+	reconcileTrigger        chan event.TypedGenericEvent[*unstructured.Unstructured]
+	garbageCollectionConfig *usagev1alpha1.GarbageCollectionConfig
+	garbageCollector        periodic.Periodic[*usagev1alpha1.GarbageCollectionConfig]
+	initialized             bool // will be true if the config controller has reconciled at least once since the last restart of the operator
 }
 
 func SharedInformation() *sharedInformation {
@@ -51,7 +52,7 @@ func (si *sharedInformation) Reset() {
 	si.startInformer = nil
 	si.reconcileTrigger = nil
 	si.garbageCollectionConfig = nil
-	si.garbageCollectionTrigger = nil
+	si.garbageCollector = nil
 	si.initialized = false
 }
 
@@ -62,8 +63,13 @@ func (si *sharedInformation) SetGarbageCollectionConfig(cfg *usagev1alpha1.Garba
 	defer si.lock.Unlock()
 
 	si.garbageCollectionConfig = cfg
-	if si.garbageCollectionTrigger != nil {
-		si.garbageCollectionTrigger <- true
+	if si.garbageCollector != nil {
+		if cfg.IsEnabled() {
+			si.garbageCollector.Enable()
+			si.garbageCollector.Trigger(true)
+		} else {
+			si.garbageCollector.Disable()
+		}
 	}
 }
 
@@ -193,14 +199,13 @@ func (si *sharedInformation) TriggerReconcile(obj *unstructured.Unstructured) {
 	}
 }
 
-// SetGarbageCollectionTrigger sets the channel which will be used to inform the garbage collector about a changed garbage collection configuration.
+// SetGarbageCollector registers the garbage collector periodic so that configuration changes can enable, disable, or trigger it.
 // This should be called once at the beginning of the operator's lifecycle.
-// If SetGarbageCollectionConfig was called before this method, it will return true to indicate that the garbage collector should immediately check its config.
-func (si *sharedInformation) SetGarbageCollectionTrigger(trigger chan<- bool) {
+func (si *sharedInformation) SetGarbageCollector(gc periodic.Periodic[*usagev1alpha1.GarbageCollectionConfig]) {
 	si.lock.Lock()
 	defer si.lock.Unlock()
 
-	si.garbageCollectionTrigger = trigger
+	si.garbageCollector = gc
 }
 
 func (si *sharedInformation) SetInitialized() {

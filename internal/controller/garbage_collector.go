@@ -37,7 +37,6 @@ func NewGarbageCollector(onboardingCluster *clusters.Cluster) (periodic.Periodic
 	if err != nil {
 		return nil, err
 	}
-	shared.SharedInformation().SetGarbageCollectionTrigger(p.GetTrigger())
 	return p, nil
 }
 
@@ -58,7 +57,7 @@ func generateGarbageCollectionFunction(onboardingCluster *clusters.Cluster) peri
 // Errors are simply logged, as the garbage collection will be retried on the next run.
 // The 'now' argument is mainly for testing, it should always be set to time.Now() in production code.
 func CollectGarbage(ctx context.Context, gcc *usagev1alpha1.GarbageCollectionConfig, onboardingCluster *clusters.Cluster, log logging.Logger, now time.Time) {
-	if gcc == nil || gcc.KeepCount == 0 && gcc.KeepDuration == nil {
+	if !gcc.IsEnabled() {
 		log.Info("No garbage collection configured, skipping garbage collection")
 		return
 	}
