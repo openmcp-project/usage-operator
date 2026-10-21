@@ -20,15 +20,14 @@ var sharedInstance *sharedInformation
 // sharedInformation contains information which is shared between multiple controllers.
 // All access to it should happen via its methods, which need to be thread-safe.
 type sharedInformation struct {
-	lock                           *sync.RWMutex
-	watchedResources               map[schema.GroupVersionKind]*usage.UsageTracker
-	activeInformers                sets.Set[schema.GroupVersionKind] // needs to be tracked separate from watchedResources, as informers cannot be stopped once started
-	startInformer                  func(gvk schema.GroupVersionKind) error
-	reconcileTrigger               chan event.TypedGenericEvent[*unstructured.Unstructured]
-	garbageCollectionConfig        *usagev1alpha1.GarbageCollectionConfig
-	garbageCollectionTrigger       chan struct{} // informs the garbage collector about a changed garbage collection configuration, also triggering a garbage collection run
-	missedGarbageCollectionTrigger bool          // indicates that the garbage collection trigger was used before being setup
-	initialized                    bool          // will be true if the config controller has reconciled at least once since the last restart of the operator
+	lock                     *sync.RWMutex
+	watchedResources         map[schema.GroupVersionKind]*usage.UsageTracker
+	activeInformers          sets.Set[schema.GroupVersionKind] // needs to be tracked separate from watchedResources, as informers cannot be stopped once started
+	startInformer            func(gvk schema.GroupVersionKind) error
+	reconcileTrigger         chan event.TypedGenericEvent[*unstructured.Unstructured]
+	garbageCollectionConfig  *usagev1alpha1.GarbageCollectionConfig
+	garbageCollectionTrigger chan<- bool // informs the garbage collector about a changed garbage collection configuration, also triggering a garbage collection run
+	initialized              bool        // will be true if the config controller has reconciled at least once since the last restart of the operator
 }
 
 func SharedInformation() *sharedInformation {
@@ -53,7 +52,6 @@ func (si *sharedInformation) Reset() {
 	si.reconcileTrigger = nil
 	si.garbageCollectionConfig = nil
 	si.garbageCollectionTrigger = nil
-	si.missedGarbageCollectionTrigger = false
 	si.initialized = false
 }
 
@@ -65,9 +63,7 @@ func (si *sharedInformation) SetGarbageCollectionConfig(cfg *usagev1alpha1.Garba
 
 	si.garbageCollectionConfig = cfg
 	if si.garbageCollectionTrigger != nil {
-		si.garbageCollectionTrigger <- struct{}{}
-	} else {
-		si.missedGarbageCollectionTrigger = true
+		si.garbageCollectionTrigger <- true
 	}
 }
 
@@ -200,12 +196,11 @@ func (si *sharedInformation) TriggerReconcile(obj *unstructured.Unstructured) {
 // SetGarbageCollectionTrigger sets the channel which will be used to inform the garbage collector about a changed garbage collection configuration.
 // This should be called once at the beginning of the operator's lifecycle.
 // If SetGarbageCollectionConfig was called before this method, it will return true to indicate that the garbage collector should immediately check its config.
-func (si *sharedInformation) SetGarbageCollectionTrigger(trigger chan struct{}) bool {
+func (si *sharedInformation) SetGarbageCollectionTrigger(trigger chan<- bool) {
 	si.lock.Lock()
 	defer si.lock.Unlock()
 
 	si.garbageCollectionTrigger = trigger
-	return si.missedGarbageCollectionTrigger
 }
 
 func (si *sharedInformation) SetInitialized() {
