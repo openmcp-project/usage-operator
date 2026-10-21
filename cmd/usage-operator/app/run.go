@@ -20,6 +20,7 @@ import (
 
 	"github.com/openmcp-project/usage-operator/internal/controller"
 	"github.com/openmcp-project/usage-operator/internal/helper"
+	"github.com/openmcp-project/usage-operator/internal/shared"
 )
 
 var setupLog logging.Logger
@@ -270,7 +271,11 @@ func (o *RunOptions) Run(ctx context.Context) error {
 	if err := namespaceCtrl.SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("error setting up namespace controller with manager: %w", err)
 	}
-	gc := controller.NewGarbageCollector(onboardingCluster)
+	gc, err := controller.NewGarbageCollector(onboardingCluster)
+	if err != nil {
+		return fmt.Errorf("error creating garbage collector: %w", err)
+	}
+	shared.SharedInformation().SetGarbageCollector(gc)
 	if err := mgr.Add(gc); err != nil { // garbage collector implements the Runnable interface, so it can be started by the manager
 		return fmt.Errorf("unable to add garbage collector to manager: %w", err)
 	}

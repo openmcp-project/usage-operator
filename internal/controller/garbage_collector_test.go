@@ -10,6 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 
 	"github.com/openmcp-project/controller-utils/pkg/clusters"
+	"github.com/openmcp-project/controller-utils/pkg/logging"
 
 	usagev1alpha1 "github.com/openmcp-project/usage-operator/api/v1alpha1"
 	"github.com/openmcp-project/usage-operator/internal/controller"
@@ -38,11 +39,10 @@ var _ = DescribeTable("Garbage Collection",
 	func(gcCfg *usagev1alpha1.GarbageCollectionConfig, now time.Time, expectedRemainingResourceUsages sets.Set[string], testDirPathSegments ...string) {
 		resetSharedInformation()
 		env := defaultTestSetup(testDirPathSegments...)
-		gc := controller.NewGarbageCollector(clusters.NewTestClusterFromClient(onboarding, env.Client(onboarding)))
+		onboardingCluster := clusters.NewTestClusterFromClient(onboarding, env.Client(onboarding))
 		shared.SharedInformation().SetGarbageCollectionConfig(gcCfg)
 
-		gc.CollectGarbage(env.Ctx, now)
-		shared.SharedInformation().SetGarbageCollectionTrigger(gc.GetTrigger())
+		controller.CollectGarbage(env.Ctx, shared.SharedInformation().GetGarbageCollectionConfig(), onboardingCluster, logging.Discard(), now)
 
 		// verify that the remaining ResourceUsage objects are as expected
 		rus := &usagev1alpha1.ResourceUsageList{}
