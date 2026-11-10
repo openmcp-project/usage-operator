@@ -7,7 +7,7 @@ replace github.com/openmcp-project/usage-operator/api/v1alpha1 => ./api/v1alpha1
 require (
 	github.com/onsi/ginkgo/v2 v2.34.0
 	github.com/onsi/gomega v1.44.0
-	github.com/openmcp-project/controller-utils v0.33.4-0.20261109035021-50521cae9dec
+	github.com/openmcp-project/controller-utils v0.34.0
 	github.com/openmcp-project/openmcp-operator/api v1.4.4
 	github.com/openmcp-project/openmcp-operator/lib v1.4.4
 	github.com/spf13/cobra v1.10.2
